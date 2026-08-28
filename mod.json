@@ -6,9 +6,9 @@
 		"mac": "2.2081",
 		"ios": "2.2081"
 	},
-	"id": "lexsungd.custom_end_level_text",
+	"id": "lexsungd.difficulty_meter",
 	"version": "1.0.0",
-	"name": "Custom End Level Text",
+	"name": "Difficulty Meter",
 	"developer": "LexSunGD",
 	"description": "description.",
 	"repository": "githubcom",
