@@ -1,0 +1,17 @@
+{
+	"geode": "5.8.2",
+	"gd": {
+		"win": "2.2081",
+		"android": "2.2081",
+		"mac": "2.2081",
+		"ios": "2.2081"
+	},
+	"id": "le10x.mod",
+	"version": "1.0.0",
+	"name": "Mod Name",
+	"developer": "le10x",
+	"description": "description.",
+	"repository": "github.com",
+	"tags": [],
+	"settings": {}
+}
