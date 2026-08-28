@@ -1,17 +1,17 @@
 {
-	"geode": "5.8.2",
+	"geode": "5.9.0",
 	"gd": {
 		"win": "2.2081",
 		"android": "2.2081",
 		"mac": "2.2081",
 		"ios": "2.2081"
 	},
-	"id": "le10x.mod",
+	"id": "lexsungd.custom_end_level_text",
 	"version": "1.0.0",
-	"name": "Mod Name",
-	"developer": "le10x",
+	"name": "Custom End Level Text",
+	"developer": "LexSunGD",
 	"description": "description.",
-	"repository": "github.com",
+	"repository": "githubcom",
 	"tags": [],
 	"settings": {}
 }
