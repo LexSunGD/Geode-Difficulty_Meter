@@ -3,34 +3,43 @@
 
 using namespace geode::prelude;
 
-// Modificamos la clase PlayLayer del juego
 class $modify(PlayLayer) {
     
     void levelComplete() {
-        // Ejecuta primero el código original del juego para que aparezca la ventana de victoria
+        // 1. Ejecutamos el método original del juego
         PlayLayer::levelComplete();
         
-        // Buscamos la capa 'EndLevelLayer' que es la ventana que aparece al ganar
+        // 2. Usamos un scheduler para esperar al siguiente frame.
+        // Esto evita que busquemos la capa antes de que termine de crearse en memoria.
+        this->getScheduler()->scheduleSelector(
+            schedule_selector(PlayLayer::delayedTextSetup), this, 0.0f, 0, 0.05f, false
+        );
+    }
+
+    // Creamos una función personalizada para añadir el texto de forma segura
+    void delayedTextSetup(float dt) {
+        // Buscamos la pantalla de victoria
         auto endLevelLayer = CCDirector::get()->getRunningScene()->getChildByID("EndLevelLayer");
         
         if (endLevelLayer) {
-            // Creamos un texto personalizado usando la fuente del juego
-            // Puedes cambiar "¡Nivel Completado!" por lo que tú quieras
-            auto miTexto = CCLabelBMFont::create("¡Eres un crack!", "bigFont.fnt");
+            // Buscamos el contenedor principal de la interfaz para meter el texto ahí dentro
+            // Si no lo encuentra, usaremos la capa base
+            auto mainLayer = endLevelLayer->getChildByID("main-layer");
+            auto targetNode = mainLayer ? mainLayer : endLevelLayer;
+
+            // Creamos tu texto personalizado ("SKILLFUL!")
+            auto miTexto = CCLabelBMFont::create("HOLAAA!", "goldFont.fnt"); // Usamos goldFont para el estilo amarillo clásico
             
-            // Obtenemos el tamaño de la pantalla para centrarlo adecuadamente
-            auto winSize = CCDirector::get()->getWinSize();
+            // Obtenemos el tamaño del nodo objetivo para centrarlo bien
+            auto targetSize = targetNode->getContentSize();
             
-            // Posicionamos el texto (en este ejemplo, un poco más arriba del centro)
-            miTexto->setPosition({winSize.width / 2, (winSize.height / 2) + 50});
-            miTexto->setScale(0.7f); // Cambia el tamaño del texto
-            miTexto->setColor({255, 255, 0}); // Color Amarillo (R, G, B)
-            
-            // (Opcional) Le asignamos un ID único para evitar conflictos con otros mods
+            // Lo posicionamos abajo, justo encima de los botones inferiores
+            miTexto->setPosition({targetSize.width / 2, (targetSize.height / 2) - 45});
+            miTexto->setScale(0.7f);
             miTexto->setID("mi-texto-personalizado");
             
-            // Añadimos el texto a la ventana de victoria
-            endLevelLayer->addChild(miTexto);
+            // El ZOrder alto (100) asegura que se pinte por encima de cualquier fondo marrón
+            targetNode->addChild(miTexto, 100);
         }
     }
 };
