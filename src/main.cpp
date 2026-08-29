@@ -1,153 +1,157 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PlayLayer.hpp>
-#include <string>
-#include <vector>
-#include <map>
-#include <algorithm>
+#include <Geode/utils/JsonValidation.hpp>
 #include <fstream>
-#include <filesystem>
+#include <vector>
+#include <string>
+#include <algorithm>
 
 using namespace geode::prelude;
 
+// Estructura para almacenar cada tramo de dificultad
 struct DifficultyRange {
-    std::string spriteName;
-    float minPercent;
-    float maxPercent;
+    std::string dificultad;
+    float inicio;
+    float fin;
 };
 
-std::map<std::string, std::string> nameToSprite = {
-    {"NA", "NA_dif.png"}, {"AUTO", "Auto_dif.png"}, {"EASY", "Easy_dif.png"},
-    {"NORMAL", "Normal_dif.png"}, {"HARD", "Hard_dif.png"}, {"HARDER", "Harder_dif.png"},
-    {"INSANE", "Insane_dif.png"}, 
-    {"EASYDEMON", "EasyDemon_dif.png"}, {"EASY_DEMON", "EasyDemon_dif.png"},
-    {"MEDIUMDEMON", "MediumDemon_dif.png"}, {"MEDIUM_DEMON", "MediumDemon_dif.png"},
-    {"HARDDEMON", "HardDemon_dif.png"}, {"HARD_DEMON", "HardDemon_dif.png"},
-    {"INSANEDEMON", "InsaneDemon_dif.png"}, {"INSANE_DEMON", "InsaneDemon_dif.png"},
-    {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME_DEMON", "ExtremeDemon_dif.png"}
-};
+// Lista global para almacenar la configuración leída del JSON
+std::vector<DifficultyRange> g_difficultyRanges;
 
-// Lector JSON ultra compacto usando el nuevo sistema de Geode v5 (.as<T>())
-std::vector<DifficultyRange> loadConfigFromJson(const std::filesystem::path& path) {
-    std::vector<DifficultyRange> ranges;
-    std::ifstream file(path);
-    if (!file.is_open()) return ranges;
-
-    auto parseResult = matjson::parse(file);
-    if (!parseResult.isOk()) return ranges;
-
-    try {
-        // En Geode v5 los arrays se convierten directamente a vectores con .as<std::vector>()
-        auto jsonVector = parseResult.unwrap().as<std::vector<matjson::Value>>();
-        
-        for (const auto& element : jsonVector) {
-            std::string diffName = element["dificultad"].as<std::string>();
-            float minP = static_cast<float>(element["inicio"].as<double>());
-            float maxP = static_cast<float>(element["fin"].as<double>());
-
-            std::transform(diffName.begin(), diffName.end(), diffName.begin(), ::toupper);
-            if (nameToSprite.count(diffName) != 0) {
-                ranges.push_back({nameToSprite[diffName], minP, maxP});
-            }
-        }
-    } catch (...) {
-        log::error("Error de formato estructurado dentro del archivo JSON.");
-    }
-    return ranges;
+// Función auxiliar para convertir el nombre del JSON al nombre del sprite compilado por Geode
+std::string getSpriteName(const std::string& jsonName) {
+    std::string cleanName = jsonName;
+    // Eliminar los espacios (ej. "Insane Demon" -> "InsaneDemon")
+    cleanName.erase(std::remove_if(cleanName.begin(), cleanName.end(), ::isspace), cleanName.end());
+    
+    // Geode antepone el ID del mod a los recursos para evitar conflictos
+    // Estructura: "ID_DEL_MOD/NombreArchivo.png"
+    return "lexsungd.difficulty_meter/" + cleanName + "_dif.png";
 }
 
-class $modify(MyDifficultyMeterLayer, PlayLayer) {
-    struct Fields {
-        CCSprite* m_meterSprite = nullptr;
-        std::vector<DifficultyRange> m_allRanges;
-        std::string m_lastLoadedSprite = "";
-        bool m_configLoaded = false;
-    };
+// Función para cargar el JSON desde la carpeta config del mod
+void loadDifficultyJson() {
+    g_difficultyRanges.clear();
+    
+    // Obtener la ruta del archivo en la carpeta 'config' de Geode
+    auto configPath = Mod::get()->getConfigDir() / "difficulty_meter.json";
+    
+    // Si el archivo no existe en config, lo copiamos desde los recursos del mod (instalación limpia)
+    if (!ghc::filesystem::exists(configPath)) {
+        auto resourcesPath = Mod::get()->getResourcesDir() / "difficulty_meter.json";
+        if (ghc::filesystem::exists(resourcesPath)) {
+            try {
+                ghc::filesystem::copy(resourcesPath, configPath);
+            } catch (...) {
+                log::error("No se pudo copiar el JSON inicial a la carpeta config.");
+            }
+        }
+    }
 
-    bool init(GJGameLevel* level, bool useReplay, bool dontRunLevel) {
-        if (!PlayLayer::init(level, useReplay, dontRunLevel)) return false;
+    // Leer el archivo JSON
+    std::ifstream file(configPath);
+    if (!file.is_open()) {
+        log::error("No se pudo abrir el archivo difficulty_meter.json en config.");
+        return;
+    }
 
-        m_fields->m_allRanges.clear();
-        m_fields->m_lastLoadedSprite = "";
-        m_fields->m_configLoaded = false;
+    try {
+        auto json = matjson::parse(file);
+        if (json.is_array()) {
+            for (const auto& item : json.as_array()) {
+                DifficultyRange range;
+                range.dificultad = item["dificultad"].as_string();
+                
+                // Soportar tanto enteros como decimales para el porcentaje
+                range.inicio = static_cast<float>(item["inicio"].as_double());
+                range.fin = static_cast<float>(item["fin"].as_double());
+                
+                g_difficultyRanges.push_back(range);
+            }
+            log::info("JSON de dificultades cargado exitosamente. Tramos: {}", g_difficultyRanges.size());
+        }
+    } catch (const std::exception& e) {
+        log::error("Error parseando el JSON: {}", e.what());
+    }
+}
 
-        std::string initialSprite = Mod::get()->getID() + "/NA_dif.png";
-        m_fields->m_meterSprite = CCSprite::create(initialSprite.c_str());
+// Modificamos PlayLayer para añadir e interactuar con el medidor
+class $modify(MyPlayLayer, PlayLayer) {
+    // Variable para identificar nuestro sprite mediante puntero seguro
+    CCSprite* m_customDifficultySprite = nullptr;
+    std::string m_currentLoadedSpriteName = "";
+
+    bool init(GJGameLevel* level, bool useReplay, bool dontRunActions) {
+        if (!PlayLayer::init(level, useReplay, dontRunActions)) return false;
+
+        // Recargar el archivo JSON cada vez que se entra a un nivel por si el usuario lo editó
+        loadDifficultyJson();
+
+        auto winSize = CCDirector::sharedDirector()->getWinSize();
+
+        // Crear contenedor base
+        auto container = CCNode::create();
+        container->setID("difficulty-meter-container"_spr);
+        container->setPosition({ winSize.width - 60.f, winSize.height - 60.f }); // Esquina superior derecha
+
+        // Inicializar el sprite con una textura por defecto (NA_dif por ejemplo)
+        m_fields->m_currentLoadedSpriteName = getSpriteName("NA");
+        m_fields->m_customDifficultySprite = CCSprite::createWithSpriteFrameName(m_fields->m_currentLoadedSpriteName.c_str());
         
-        if (m_fields->m_meterSprite) {
-            auto winSize = CCDirector::sharedDirector()->getWinSize();
-            m_fields->m_meterSprite->setPosition({ winSize.width - 60, winSize.height - 40 });
-            m_fields->m_meterSprite->setScale(1.0f);
-            m_fields->m_meterSprite->setVisible(false); 
-            this->addChild(m_fields->m_meterSprite, 100);
+        if (m_fields->m_customDifficultySprite) {
+            m_fields->m_customDifficultySprite->setScale(0.7f);
+            container->addChild(m_fields->m_customDifficultySprite);
         }
 
-        this->scheduleUpdate();
+        // Añadir a la interfaz del juego (Z-Order alto para que esté visible sobre todo)
+        this->addChild(container, 999);
+
         return true;
     }
 
+    // Hook al método update que ejecuta el juego frame a frame
     void update(float dt) {
         PlayLayer::update(dt);
-        if (!m_fields->m_meterSprite) return;
 
-        if (!m_fields->m_configLoaded) {
-            m_fields->m_configLoaded = true;
+        if (!m_fields->m_customDifficultySprite || g_difficultyRanges.empty()) return;
 
-            auto configDir = Mod::get()->getConfigDir();
-            std::filesystem::create_directories(configDir);
-            auto destConfigPath = configDir / "difficulty_meter.json";
+        // 1. Calcular el porcentaje exacto actual del nivel
+        // Usamos la posición del icono del jugador principal respecto a la longitud total del mapa
+        float length = m_levelLength;
+        if (length <= 0.f) return;
 
-            if (!std::filesystem::exists(destConfigPath)) {
-                auto resourcePath = Mod::get()->getResourcesDir() / "difficulty_meter.json";
-                if (std::filesystem::exists(resourcePath)) {
-                    std::filesystem::copy_file(resourcePath, destConfigPath);
-                } else {
-                    std::ofstream outfile(destConfigPath);
-                    outfile << "[\n"
-                            << "  { \"dificultad\": \"Easy\", \"inicio\": 0, \"fin\": 10.5 },\n"
-                            << "  { \"dificultad\": \"Normal\", \"inicio\": 11, \"fin\": 23 },\n"
-                            << "  { \"dificultad\": \"Insane Demon\", \"inicio\": 24, \"fin\": 50 },\n"
-                            << "  { \"dificultad\": \"Easy\", \"inicio\": 51, \"fin\": 76 },\n"
-                            << "  { \"dificultad\": \"Harder\", \"inicio\": 77, \"fin\": 91 },\n"
-                            << "  { \"dificultad\": \"Auto\", \"inicio\": 92, \"fin\": 100 }\n"
-                            << "]";
-                    outfile.close();
-                }
-            }
+        float currentPosition = m_player1->m_position.x;
+        float percent = (currentPosition / length) * 100.f;
 
-            m_fields->m_allRanges = loadConfigFromJson(destConfigPath);
-        }
+        // Limitar entre 0 y 100 por seguridad
+        if (percent < 0.f) percent = 0.f;
+        if (percent > 100.f) percent = 100.f;
 
-        float percentage = this->getCurrentPercent();
-        percentage = std::clamp(percentage, 0.0f, 100.0f);
-
-        std::string targetSpriteName = "";
-        for (const auto& range : m_fields->m_allRanges) {
-            if (percentage >= range.minPercent && percentage <= range.maxPercent) {
-                targetSpriteName = range.spriteName;
+        // 2. Buscar qué dificultad corresponde a este porcentaje
+        std::string targetDifficulty = "NA"; // Por defecto si no encuentra match
+        for (const auto& range : g_difficultyRanges) {
+            if (percent >= range.inicio && percent <= range.fin) {
+                targetDifficulty = range.dificultad;
                 break;
             }
         }
 
-        if (targetSpriteName.empty()) {
-            m_fields->m_meterSprite->setVisible(false);
-            m_fields->m_lastLoadedSprite = "";
-            return;
-        }
+        // 3. Convertir al nombre del recurso e inyectarlo si cambió
+        std::string targetSpriteName = getSpriteName(targetDifficulty);
 
-        m_fields->m_meterSprite->setVisible(true);
-
-        if (m_fields->m_lastLoadedSprite != targetSpriteName) {
-            std::string finalPath = Mod::get()->getID() + "/" + targetSpriteName;
-            auto texture = CCTextureCache::sharedTextureCache()->addImage(finalPath.c_str(), false);
-            if (texture) {
-                m_fields->m_meterSprite->setTexture(texture);
-                
-                CCRect rect = CCRectZero;
-                rect.size = texture->getContentSize();
-                m_fields->m_meterSprite->setTextureRect(rect);
-                
-                m_fields->m_meterSprite->setScale(1.0f);
-                m_fields->m_lastLoadedSprite = targetSpriteName;
+        if (m_fields->m_currentLoadedSpriteName != targetSpriteName) {
+            auto frameCache = CCSpriteFrameCache::sharedSpriteFrameCache();
+            auto targetFrame = frameCache->spriteFrameByName(targetSpriteName.c_str());
+            
+            if (targetFrame) {
+                m_fields->m_customDifficultySprite->setDisplayFrame(targetFrame);
+                m_fields->m_currentLoadedSpriteName = targetSpriteName;
+            } else {
+                // Si el frame no existe, intentamos usar NA_dif para prevenir crashes
+                auto naFrame = frameCache->spriteFrameByName(getSpriteName("NA").c_str());
+                if (naFrame) {
+                    m_fields->m_customDifficultySprite->setDisplayFrame(naFrame);
+                }
             }
         }
     }
