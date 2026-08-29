@@ -1,11 +1,12 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PlayLayer.hpp>
-#include <Geode/loader/Setting.hpp> // CORRECCIÓN AQUÍ: Ruta actualizada de Geode v5
+#include <Geode/loader/Setting.hpp>
 #include <string>
 #include <vector>
 #include <map>
 #include <algorithm>
 #include <fstream>
+#include <filesystem> // Reemplazo por la librería estándar
 
 using namespace geode::prelude;
 
@@ -22,10 +23,10 @@ std::map<std::string, std::string> shortToFullName = {
     {"HD", "HardDemon_dif.png"}, {"ID", "InsaneDemon_dif.png"}, {"ExD", "ExtremeDemon_dif.png"}
 };
 
-// Función para leer y procesar el archivo JSON desde cualquier ruta seleccionada
-std::vector<DifficultyRange> loadRangesFromFile(const ghc::filesystem::path& path) {
+// Se cambió 'ghc::filesystem' por 'std::filesystem'
+std::vector<DifficultyRange> loadRangesFromFile(const std::filesystem::path& path) {
     std::vector<DifficultyRange> ranges;
-    if (path.empty() || !ghc::filesystem::exists(path)) return ranges;
+    if (path.empty() || !std::filesystem::exists(path)) return ranges;
 
     auto parseResult = matjson::parseFile(path);
     if (!parseResult.has_value()) return ranges;
@@ -61,7 +62,6 @@ protected:
 
         this->setContentSize({ width, 40.0f });
 
-        // Crear botón con ícono de carpeta/archivo de Geode
         auto spr = CCSprite::createWithSpriteFrameName("GJ_plusBtn_001.png");
         spr->setScale(0.65f);
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(FilePickSettingNode::onPickFile));
@@ -71,8 +71,7 @@ protected:
         menu->setPosition({ width - 30.0f, 20.0f });
         this->addChild(menu);
 
-        // Texto que muestra la ruta del archivo seleccionado en el menú
-        m_pathLabel = CCLabelBMFont::create("Ningún archivo seleccionado", "chatFont.fnt");
+        m_pathLabel = CCLabelBMFont::create("Ningun archivo seleccionado", "chatFont.fnt");
         m_pathLabel->setAnchorPoint({ 0.0f, 0.5f });
         m_pathLabel->setPosition({ 20.0f, 20.0f });
         m_pathLabel->setScale(0.5f);
@@ -84,9 +83,10 @@ protected:
 
     void onPickFile(CCObject*) {
         file::FilePickOptions options;
-        options.filters = { file::FileFilter("Archivos de Configuración", {"json", "txt"}) };
+        options.filters = { file::FileFilter("Archivos de Configuracion", {"json", "txt"}) };
 
-        file::pickFile(file::PickType::OpenFile, options, [this](ghc::filesystem::path path) {
+        // Aseguramos compatibilidad con std::filesystem
+        file::pickFile(file::PickType::OpenFile, options, [this](std::filesystem::path path) {
             auto value = static_cast<SettingValue*>(m_value);
             Mod::get()->setSettingValue<std::string>(value->getKey(), path.string());
             this->updateLabel();
@@ -101,7 +101,7 @@ protected:
         if (currentPath.empty()) {
             m_pathLabel->setString("Haz clic en (+) para buscar un archivo...");
         } else {
-            auto filename = ghc::filesystem::path(currentPath).filename().string();
+            auto filename = std::filesystem::path(currentPath).filename().string();
             m_pathLabel->setString(filename.c_str());
         }
     }
@@ -122,7 +122,6 @@ public:
     }
 };
 
-// Registrar el nodo personalizado en la API de Geode
 $execute {
     Mod::get()->registerCustomSettingNode("config-file-path", [](SettingValue* value, float width) {
         return FilePickSettingNode::create(value, width);
@@ -139,15 +138,13 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontRunLevel) {
         if (!PlayLayer::init(level, useReplay, dontRunLevel)) return false;
 
-        // Leer la ruta absoluta guardada por el explorador de archivos nativo
         std::string chosenPathStr = Mod::get()->getSettingValue<std::string>("config-file-path");
         
         if (!chosenPathStr.empty()) {
-            m_fields->m_parsedRanges = loadRangesFromFile(ghc::filesystem::path(chosenPathStr));
+            m_fields->m_parsedRanges = loadRangesFromFile(std::filesystem::path(chosenPathStr));
             log::info("Cargando medidor desde explorador local: {}", chosenPathStr);
         }
 
-        // Crear el sprite inicial
         std::string initialSprite = Mod::get()->getID() + "/NA_dif.png";
         m_fields->m_meterSprite = CCSprite::create(initialSprite.c_str());
         
@@ -179,7 +176,6 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
             }
         }
 
-        // Si la zona actual no fue configurada en tu archivo, se vuelve invisible al instante
         if (currentSpriteName.empty()) {
             m_fields->m_meterSprite->setVisible(false);
             return;
