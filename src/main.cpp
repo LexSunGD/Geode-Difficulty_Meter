@@ -14,13 +14,13 @@ struct DifficultyRange {
     float maxPercent;
 };
 
-// Función para convertir a mayúsculas
+// Convierte un string a mayúsculas para procesar "A" e "Y" sin importar cómo se escriban
 std::string toUpper(std::string str) {
     std::transform(str.begin(), str.end(), str.begin(), ::toupper);
     return str;
 }
 
-// Limpia espacios en blanco al inicio y al final de un texto
+// Limpia espacios en blanco alrededor del texto
 std::string trim(std::string str) {
     if (str.empty()) return str;
     size_t first = str.find_first_not_of(" \t\r\n");
@@ -29,7 +29,7 @@ std::string trim(std::string str) {
     return str.substr(first, (last - first + 1));
 }
 
-// Divide una cadena de texto por un delimitador específico
+// Divide una cadena de texto basándose en un delimitador
 std::vector<std::string> split(const std::string& str, const std::string& delimiter) {
     std::vector<std::string> tokens;
     std::string s = str;
@@ -42,26 +42,25 @@ std::vector<std::string> split(const std::string& str, const std::string& delimi
     return tokens;
 }
 
-// Procesa una casilla de Geode de forma ultra-segura
+// Lógica de Procesamiento: Separa por "Y" y luego extrae los límites con "A"
 std::vector<DifficultyRange> parseTextSetting(const std::string& input, const std::string& spriteName) {
     std::vector<DifficultyRange> ranges;
     std::string cleanedInput = trim(input);
     if (cleanedInput.empty()) return ranges;
 
-    // Convertir todo a mayúsculas y separar por la letra "Y"
     std::string upperInput = toUpper(cleanedInput);
+    
+    // 1. La "Y" separa bloques independientes (Ej: "0 A 20" Y "50 A 60")
     std::vector<std::string> blocks = split(upperInput, "Y");
 
     for (auto& block : blocks) {
         block = trim(block);
         if (block.empty()) continue;
 
-        // Separar cada bloque por la palabra clave " A "
+        // 2. La "A" define el inicio y el fin del tramo (Ej: "0" A "20")
         std::vector<std::string> parts = split(block, " A ");
-        
-        // Si el usuario no puso espacios (ej: "0A20"), intentar separar por la "A" directa
         if (parts.size() < 2) {
-            parts = split(block, "A");
+            parts = split(block, "A"); // Por si no se pusieron espacios
         }
 
         if (parts.size() >= 2) {
@@ -70,9 +69,8 @@ std::vector<DifficultyRange> parseTextSetting(const std::string& input, const st
                 float maxP = std::stof(trim(parts[1]));
 
                 ranges.push_back({spriteName, minP, maxP});
-                log::info("Regla registrada exitosamente -> {}: {}% a {}%", spriteName, minP, maxP);
             } catch (...) {
-                log::error("Error de formato al procesar el bloque: '{}'", block);
+                // Evita crasheos si hay letras mal escritas
             }
         }
     }
@@ -83,15 +81,16 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
     struct Fields {
         CCSprite* m_meterSprite = nullptr;
         std::vector<DifficultyRange> m_allRanges;
+        std::string m_lastLoadedSprite = "";
     };
 
     bool init(GJGameLevel* level, bool useReplay, bool dontRunLevel) {
         if (!PlayLayer::init(level, useReplay, dontRunLevel)) return false;
 
-        // Limpiar rangos previos por seguridad al reiniciar el nivel
         m_fields->m_allRanges.clear();
+        m_fields->m_lastLoadedSprite = "";
 
-        // Mapa de vinculación con tu mod.json
+        // Vinculación estricta con las casillas del mod.json
         std::map<std::string, std::string> settingToSprite = {
             {"diff-na", "NA_dif.png"}, {"diff-auto", "Auto_dif.png"}, {"diff-easy", "Easy_dif.png"},
             {"diff-normal", "Normal_dif.png"}, {"diff-hard", "Hard_dif.png"}, {"diff-harder", "Harder_dif.png"},
@@ -99,21 +98,20 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
             {"diff-hard-demon", "HardDemon_dif.png"}, {"diff-insane-demon", "InsaneDemon_dif.png"}, {"diff-extreme-demon", "ExtremeDemon_dif.png"}
         };
 
-        // Leer e indexar el texto de las 12 casillas del menú de Geode
         for (const auto& [settingKey, spriteName] : settingToSprite) {
             std::string userStr = Mod::get()->getSettingValue<std::string>(settingKey);
             auto extractedRanges = parseTextSetting(userStr, spriteName);
             m_fields->m_allRanges.insert(m_fields->m_allRanges.end(), extractedRanges.begin(), extractedRanges.end());
         }
 
-        // Crear la imagen base inicial en pantalla
-        std::string initialSprite = Mod::get()->getID() + "/ExtremeDemon_dif.png";
+        // Cargar la textura inicial de respaldo de forma segura
+        std::string initialSprite = Mod::get()->getID() + "/Normal_dif.png";
         m_fields->m_meterSprite = CCSprite::create(initialSprite.c_str());
         
         if (m_fields->m_meterSprite) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             m_fields->m_meterSprite->setPosition({ winSize.width - 80, winSize.height - 80 });
-            m_fields->m_meterSprite->setScale(1.0f); // Tamaño nativo píxel por píxel
+            m_fields->m_meterSprite->setScale(1.0f);
             this->m_uiLayer->addChild(m_fields->m_meterSprite);
         }
 
@@ -124,36 +122,45 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
         PlayLayer::update(dt);
         if (!m_fields->m_meterSprite) return;
 
-        // Calcular el porcentaje real del nivel en juego
         float percentage = 0.0f;
         if (this->m_levelLength > 0.0f) {
             percentage = (this->m_player1->m_position.x / this->m_levelLength) * 100.0f;
         }
         percentage = std::clamp(percentage, 0.0f, 100.0f);
 
-        // Buscar qué sprite corresponde al porcentaje actual
         std::string targetSpriteName = "";
         for (const auto& range : m_fields->m_allRanges) {
             if (percentage >= range.minPercent && percentage <= range.maxPercent) {
                 targetSpriteName = range.spriteName;
-                break; // Prioridad al primer tramo coincidente encontrado
+                break;
             }
         }
 
-        // Si el porcentaje cae en un tramo vacío o no configurado, se vuelve invisible
+        // Si caemos en una zona vacía, ocultamos el medidor de inmediato
         if (targetSpriteName.empty()) {
             m_fields->m_meterSprite->setVisible(false);
+            m_fields->m_lastLoadedSprite = "";
             return;
         }
 
-        // Actualizar la textura manteniendo las proporciones exactas
         m_fields->m_meterSprite->setVisible(true);
-        std::string finalPath = Mod::get()->getID() + "/" + targetSpriteName;
-        auto texture = CCTextureCache::sharedTextureCache()->addImage(finalPath.c_str(), false);
-        
-        if (texture) {
-            m_fields->m_meterSprite->setTexture(texture);
-            m_fields->m_meterSprite->setScale(1.0f);
+
+        // OPTIMIZACIÓN DE RENDERIZADO: Solo cambia la textura si realmente cambió de dificultad
+        if (m_fields->m_lastLoadedSprite != targetSpriteName) {
+            std::string finalPath = Mod::get()->getID() + "/" + targetSpriteName;
+            auto texture = CCTextureCache::sharedTextureCache()->addImage(finalPath.c_str(), false);
+            
+            if (texture) {
+                m_fields->m_meterSprite->setTexture(texture);
+                
+                // SOLUCIÓN AL BUG DE COCOS2D-X: Redibuja el contenedor exacto con las nuevas medidas reales
+                CCRect rect = CCRectZero;
+                rect.size = texture->getContentSize();
+                m_fields->m_meterSprite->setTextureRect(rect);
+                
+                m_fields->m_meterSprite->setScale(1.0f); // Mantener escala real exacta píxel por píxel
+                m_fields->m_lastLoadedSprite = targetSpriteName;
+            }
         }
     }
 };
