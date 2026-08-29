@@ -10,7 +10,7 @@
 	"version": "1.0.0",
 	"name": "Difficulty Meter",
 	"developer": "LexSunGD",
-	"description": "Selecciona perfiles de dificultad abriendo el explorador de archivos nativo.",
+	"description": "Configura los tramos usando el formato: MIN A MAX Y MIN A MAX",
 	"repository": "githubcom",
 	"tags": [],
 	"resources": {
@@ -19,11 +19,17 @@
 		]
 	},
 	"settings": {
-		"config-file-path": {
-			"name": "Archivo de Configuración",
-			"description": "Presiona el botón para abrir el explorador de archivos y elegir tu JSON o TXT.",
-			"type": "custom",
-			"default": ""
-		}
+		"diff-na": { "name": "NA", "type": "string", "default": "" },
+		"diff-auto": { "name": "Auto", "type": "string", "default": "" },
+		"diff-easy": { "name": "Easy", "type": "string", "default": "0 A 20 Y 50 A 60" },
+		"diff-normal": { "name": "Normal", "type": "string", "default": "21 A 39 Y 94 A 100" },
+		"diff-hard": { "name": "Hard", "type": "string", "default": "" },
+		"diff-harder": { "name": "Harder", "type": "string", "default": "" },
+		"diff-insane": { "name": "Insane", "type": "string", "default": "" },
+		"diff-easy-demon": { "name": "Easy Demon", "type": "string", "default": "40 A 49 Y 61 A 73" },
+		"diff-medium-demon": { "name": "Medium Demon", "type": "string", "default": "" },
+		"diff-hard-demon": { "name": "Hard Demon", "type": "string", "default": "" },
+		"diff-insane-demon": { "name": "Insane Demon", "type": "string", "default": "" },
+		"diff-extreme-demon": { "name": "Extreme Demon", "type": "string", "default": "74 A 93" }
 	}
 }
