@@ -1,1 +1,1 @@
-Easy 0-10, Normal 11-23, Insane Demon 24-50, Easy 51-76, Harder 77-91, Auto 92-100.
+Easy 0-10, Normal 11-23, InsaneDemon 24-50, Easy 51-76, Harder 77-91, Auto 92-100
