@@ -1,5 +1,5 @@
 {
-	"geode": "5.10.1",
+	"geode": "v5.10.1",
 	"gd": {
 		"win": "2.2081",
 		"android": "2.2081",
@@ -10,7 +10,7 @@
 	"version": "1.0.0",
 	"name": "Difficulty Meter",
 	"developer": "LexSunGD",
-	"description": "Configura los tramos usando el formato: MIN A MAX Y MIN A MAX",
+	"description": "Configura tramos dinamicos desde el menu usando: MIN A MAX Y MIN A MAX",
 	"repository": "githubcom",
 	"tags": [],
 	"resources": {
