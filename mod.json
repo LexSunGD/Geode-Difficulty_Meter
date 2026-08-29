@@ -1,5 +1,5 @@
 {
-	"geode": "5.10.1",
+	"geode": "v5.10.1",
 	"gd": {
 		"win": "2.2081",
 		"android": "2.2081",
@@ -10,7 +10,7 @@
 	"version": "1.0.0",
 	"name": "Difficulty Meter",
 	"developer": "LexSunGD",
-	"description": "Un medidor de dificultad dinámico basado en el porcentaje del nivel.",
+	"description": "Selecciona perfiles de dificultad abriendo el explorador de archivos nativo.",
 	"repository": "githubcom",
 	"tags": [],
 	"resources": {
@@ -19,11 +19,11 @@
 		]
 	},
 	"settings": {
-		"meter-config": {
-			"name": "Rangos de Porcentaje",
-			"description": "Escribe los porcentajes separados por comas. Ejemplo: NA 0-5, A 6-20, E 21-35",
-			"type": "string",
-			"default": "NA 0-5, A 6-10, E 11-20, N 21-35, H 36-50, Hr 51-65, I 66-75, ED 76-85, MD 86-90, HD 91-95, ID 96-98, ExD 99-100"
+		"config-file-path": {
+			"name": "Archivo de Configuración",
+			"description": "Presiona el botón para abrir el explorador de archivos y elegir tu JSON o TXT.",
+			"type": "custom",
+			"default": ""
 		}
 	}
 }
