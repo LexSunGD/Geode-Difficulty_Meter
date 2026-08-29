@@ -22,13 +22,13 @@ std::map<std::string, std::string> nameToSprite = {
     {"NORMAL", "Normal_dif.png"}, {"HARD", "Hard_dif.png"}, {"HARDER", "Harder_dif.png"},
     {"INSANE", "Insane_dif.png"}, 
     {"EASYDEMON", "EasyDemon_dif.png"}, {"EASY DEMON", "EasyDemon_dif.png"},
-    {"MEDIUMDEMON", "MediumDemon_dif.png"}, {"MEDIUM_DEMON", "MediumDemon_dif.png"},
-    {"HARDDEMON", "HardDemon_dif.png"}, {"HARD_DEMON", "HardDemon_dif.png"},
-    {"INSANEDEMON", "InsaneDemon_dif.png"}, {"INSANE_DEMON", "InsaneDemon_dif.png"},
-    {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME_DEMON", "ExtremeDemon_dif.png"}
+    {"MEDIUMDEMON", "MediumDemon_dif.png"}, {"MEDIUM DEMON", "MediumDemon_dif.png"},
+    {"HARDDEMON", "HardDemon_dif.png"}, {"HARD DEMON", "HardDemon_dif.png"},
+    {"INSANEDEMON", "InsaneDemon_dif.png"}, {"INSANE DEMON", "InsaneDemon_dif.png"},
+    {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME DEMON", "ExtremeDemon_dif.png"}
 };
 
-// Limpiador agresivo de caracteres de control de Android
+// Limpiador agresivo de caracteres basura y saltos de línea de Android
 std::string cleanInputString(std::string str) {
     str.erase(std::remove_if(str.begin(), str.end(), [](unsigned char c) {
         return c == '\r' || c == '\n' || c == '\"' || c == 'f' || c == 'F' || c == '.';
@@ -49,35 +49,33 @@ std::vector<DifficultyRange> loadConfigFromTxt(const std::filesystem::path& path
 
     std::stringstream ss(content);
     std::string item;
-    // 1. Separar bloques por comas
+    // 1. Separar bloques independientes por las comas
     while (std::getline(ss, item, ',')) {
         if (item.empty()) continue;
 
-        // CORRECCIÓN RADICAL: Buscar dónde empieza el primer número (0-9) en el bloque
-        size_t firstDigitPos = std::string::npos;
-        for (size_t i = 0; i < item.length(); ++i) {
-            if (std::isdigit(static_cast<unsigned char>(item[i]))) {
-                firstDigitPos = i;
+        // Separar las palabras de los números usando flujos de extracción limpios
+        std::stringstream itemStream(item);
+        std::string word, fullDiffName = "", rangePart = "";
+
+        // Leer palabra por palabra hasta encontrar el bloque del rango (ej: "11-23")
+        while (itemStream >> word) {
+            if (word.find('-') != std::string::npos || std::isdigit(static_cast<unsigned char>(word[0]))) {
+                rangePart = word;
                 break;
+            } else {
+                if (!fullDiffName.empty()) fullDiffName += " ";
+                fullDiffName += word;
             }
         }
 
-        // Si no hay números en el bloque, no es una regla válida
-        if (firstDigitPos == std::string::npos || firstDigitPos == 0) continue;
+        if (fullDiffName.empty() || rangePart.empty()) continue;
 
-        // Separar limpiamente el nombre de la dificultad y el tramo numérico
-        std::string diffName = item.substr(0, firstDigitPos);
-        std::string rangePart = item.substr(firstDigitPos);
+        // Convertir el nombre de la dificultad a mayúsculas
+        std::transform(fullDiffName.begin(), fullDiffName.end(), fullDiffName.begin(), ::toupper);
+        if (nameToSprite.count(fullDiffName) == 0) continue;
+        std::string targetSprite = nameToSprite[fullDiffName];
 
-        // Limpiar espacios remanentes alrededor de las palabras
-        diffName.erase(0, diffName.find_first_not_of(" \t"));
-        diffName.erase(diffName.find_last_not_of(" \t") + 1);
-        
-        std::transform(diffName.begin(), diffName.end(), diffName.begin(), ::toupper);
-        if (nameToSprite.count(diffName) == 0) continue;
-        std::string targetSprite = nameToSprite[diffName];
-
-        // Procesar los números usando el guion '-'
+        // Procesar los números del rango de forma aislada e inmune a espacios
         size_t dashPos = rangePart.find('-');
         if (dashPos != std::string::npos) {
             try {
@@ -110,11 +108,10 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
         
         if (m_fields->m_meterSprite) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
-            // Posición limpia en la esquina superior derecha, como en tu captura
             m_fields->m_meterSprite->setPosition({ winSize.width - 60, winSize.height - 40 });
             m_fields->m_meterSprite->setScale(1.0f);
             
-            // VOLVEMOS A HACERLO INVISIBLE: Si la traducción tiene éxito, el update lo encenderá al instante
+            // Inicia oculto. Si la traducción tiene éxito, el update lo encenderá de inmediato
             m_fields->m_meterSprite->setVisible(false); 
             
             this->addChild(m_fields->m_meterSprite, 100);
@@ -149,7 +146,6 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
             m_fields->m_allRanges = loadConfigFromTxt(destConfigPath);
         }
 
-        // Obtener porcentaje de Geode
         float percentage = this->getCurrentPercent();
         percentage = std::clamp(percentage, 0.0f, 100.0f);
 
@@ -161,7 +157,6 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
             }
         }
 
-        // Invisibilidad reactiva en zonas vacías
         if (targetSpriteName.empty()) {
             m_fields->m_meterSprite->setVisible(false);
             m_fields->m_lastLoadedSprite = "";
