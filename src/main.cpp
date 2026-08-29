@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <fstream>
 #include <filesystem>
-#include <sstream>
 
 using namespace geode::prelude;
 
@@ -24,68 +23,43 @@ std::map<std::string, std::string> nameToSprite = {
     {"MEDIUMDEMON", "MediumDemon_dif.png"}, {"MEDIUM DEMON", "MediumDemon_dif.png"},
     {"HARDDEMON", "HardDemon_dif.png"}, {"HARD DEMON", "HardDemon_dif.png"},
     {"INSANEDEMON", "InsaneDemon_dif.png"}, {"INSANE DEMON", "InsaneDemon_dif.png"},
-    {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME_DEMON", "ExtremeDemon_dif.png"}
+    {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME DEMON", "ExtremeDemon_dif.png"}
 };
 
-// Limpiador corregido: SOLAMENTE quita comillas y saltos de linea invisibles de Android (\r, \n)
-std::string cleanAndroidStr(std::string str) {
-    str.erase(std::remove_if(str.begin(), str.end(), [](unsigned char c) {
-        return c == '\r' || c == '\n' || c == '\"';
-    }), str.end());
-    return str;
-}
-
-std::vector<DifficultyRange> loadConfigFromTxt(const std::filesystem::path& path) {
+// Lector JSON nativo e inmune a imperfecciones de almacenamiento
+std::vector<DifficultyRange> loadConfigFromJson(const std::filesystem::path& path) {
     std::vector<DifficultyRange> ranges;
     if (!std::filesystem::exists(path)) return ranges;
 
-    std::ifstream file(path);
-    std::string content;
-    if (!std::getline(file, content)) return ranges;
-    
-    content = cleanAndroidStr(content);
-    if (content.empty()) return ranges;
+    // Procesar archivo usando matjson de Geode
+    auto parseResult = matjson::parseFile(path);
+    if (!parseResult.has_value()) {
+        log::error("El archivo JSON tiene un error de corchetes o sintaxis.");
+        return ranges;
+    }
 
-    std::stringstream ss(content);
-    std::string item;
-    // 1. Separar bloques por comas
-    while (std::getline(ss, item, ',')) {
-        if (item.empty()) continue;
+    auto jsonArray = parseResult.value();
+    if (!jsonArray.is_array()) return ranges;
 
-        std::stringstream itemStream(item);
-        std::vector<std::string> tokens;
-        std::string token;
+    // Recorrer la lista ordenada []
+    for (const auto& element : jsonArray.as_array()) {
+        if (!element.is_object()) continue;
+        auto obj = element.as_object();
 
-        // Extraer todos los fragmentos separados por espacios dentro del bloque
-        while (itemStream >> token) {
-            tokens.push_back(token);
+        // Validar que existan todas las llaves necesarias dentro del bloque {}
+        if (obj.count("dificultad") && obj.count("inicio") && obj.count("fin")) {
+            std::string diffName = obj["dificultad"].as_string();
+            
+            // matjson procesa números como flotantes o enteros de forma automática
+            float minP = static_cast<float>(obj["inicio"].as_double());
+            float maxP = static_cast<float>(obj["fin"].as_double());
+
+            // Traducir nombre a la imagen correspondiente
+            std::transform(diffName.begin(), diffName.end(), diffName.begin(), ::toupper);
+            if (nameToSprite.count(diffName) != 0) {
+                ranges.push_back({nameToSprite[diffName], minP, maxP});
+            }
         }
-
-        // Un bloque valido debe tener al menos el nombre de la dificultad y 2 numeros (ej: Easy 0 10.5)
-        if (tokens.size() < 3) continue;
-
-        // Los dos ultimos elementos del bloque son OBLIGATORIAMENTE los porcentajes min y max
-        std::string maxStr = tokens.back(); tokens.pop_back();
-        std::string minStr = tokens.back(); tokens.pop_back();
-
-        // Todo lo que quedo antes en el vector forma el nombre de la dificultad (soporta espacios)
-        std::string diffName = "";
-        for (size_t i = 0; i < tokens.size(); ++i) {
-            if (i > 0) diffName += " ";
-            diffName += tokens[i];
-        }
-
-        // Convertir nombre a mayusculas para buscar en el mapa
-        std::transform(diffName.begin(), diffName.end(), diffName.begin(), ::toupper);
-        if (nameToSprite.count(diffName) == 0) continue;
-        std::string targetSprite = nameToSprite[diffName];
-
-        try {
-            // Conversion limpia a decimales flotantes reales sin interferencia de letras o guiones
-            float minP = std::stof(minStr);
-            float maxP = std::stof(maxStr);
-            ranges.push_back({targetSprite, minP, maxP});
-        } catch (...) {}
     }
     return ranges;
 }
@@ -124,26 +98,27 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
         PlayLayer::update(dt);
         if (!m_fields->m_meterSprite) return;
 
+        // Cargar el JSON de forma segura en el primer frame de juego en Android
         if (!m_fields->m_configLoaded) {
             m_fields->m_configLoaded = true;
 
             auto configDir = Mod::get()->getConfigDir();
             std::filesystem::create_directories(configDir);
-            auto destConfigPath = configDir / "difficulty_meter.txt";
+            auto destConfigPath = configDir / "difficulty_meter.json";
 
             if (!std::filesystem::exists(destConfigPath)) {
-                auto resourcePath = Mod::get()->getResourcesDir() / "difficulty_meter.txt";
+                auto resourcePath = Mod::get()->getResourcesDir() / "difficulty_meter.json";
                 if (std::filesystem::exists(resourcePath)) {
                     std::filesystem::copy_file(resourcePath, destConfigPath);
                 } else {
+                    // Fallback de respaldo por si no se copia el recurso
                     std::ofstream outfile(destConfigPath);
-                    // Formato nuevo limpio sin guiones en el archivo inicial por si acaso
-                    outfile << "Easy 0 10, Normal 11 23, InsaneDemon 24 50, Easy 51 76, Harder 77 91, Auto 92 100";
+                    outfile << "[\n  { \"dificultad\": \"Easy\", \"inicio\": 0, \"fin\": 10 }\n]";
                     outfile.close();
                 }
             }
 
-            m_fields->m_allRanges = loadConfigFromTxt(destConfigPath);
+            m_fields->m_allRanges = loadConfigFromJson(destConfigPath);
         }
 
         float percentage = this->getCurrentPercent();
