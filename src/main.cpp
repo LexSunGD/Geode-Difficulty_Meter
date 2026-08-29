@@ -16,7 +16,6 @@ struct DifficultyRange {
     float maxPercent;
 };
 
-// MAPA ACTUALIZADO: Ahora reconoce las dificultades escritas juntas (HardDemon) o separadas (Hard Demon)
 std::map<std::string, std::string> nameToSprite = {
     {"NA", "NA_dif.png"}, 
     {"AUTO", "Auto_dif.png"}, 
@@ -32,7 +31,6 @@ std::map<std::string, std::string> nameToSprite = {
     {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME DEMON", "ExtremeDemon_dif.png"}
 };
 
-// Limpia espacios, puntos finales y caracteres invisibles de salto de línea (\r, \n)
 std::string trimStr(std::string str) {
     if (str.empty()) return str;
     str.erase(std::remove_if(str.begin(), str.end(), [](unsigned char c) {
@@ -130,10 +128,8 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
         PlayLayer::update(dt);
         if (!m_fields->m_meterSprite) return;
 
-        float percentage = 0.0f;
-        if (this->m_levelLength > 0.0f) {
-            percentage = (this->m_player1->m_position.x / this->m_levelLength) * 100.0f;
-        }
+        // CORRECCIÓN AQUÍ: Usamos la función nativa de Geode que extrae el porcentaje oficial del nivel
+        float percentage = this->getCurrentPercent();
         percentage = std::clamp(percentage, 0.0f, 100.0f);
 
         std::string targetSpriteName = "";
