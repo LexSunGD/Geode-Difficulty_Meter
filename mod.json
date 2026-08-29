@@ -15,10 +15,7 @@
 	"tags": ["interface", "utility"],
 	"resources": {
 		"sprites": [
-			"resources/*_dif.png"
-		],
-		"files": [
-			"difficulty_meter.json"
+			"*_dif.png"
 		]
 	}
 }
