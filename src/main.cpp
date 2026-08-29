@@ -21,7 +21,7 @@ std::map<std::string, std::string> nameToSprite = {
     {"INSANE", "Insane_dif.png"}, 
     {"EASYDEMON", "EasyDemon_dif.png"}, {"EASY_DEMON", "EasyDemon_dif.png"},
     {"MEDIUMDEMON", "MediumDemon_dif.png"}, {"MEDIUM_DEMON", "MediumDemon_dif.png"},
-    {"HARDDEMON", "HardDemon_dif.png"}, {"HARD_DEMON", "HardDemon_dif.png"},
+    {"HARDDEMON", "HardDemon_dif.png"}, {"HARD__DEMON", "HardDemon_dif.png"},
     {"INSANEDEMON", "InsaneDemon_dif.png"}, {"INSANE_DEMON", "InsaneDemon_dif.png"},
     {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME_DEMON", "ExtremeDemon_dif.png"}
 };
@@ -34,14 +34,15 @@ std::vector<DifficultyRange> loadConfigFromJson(const std::filesystem::path& pat
     std::ifstream file(path);
     if (!file.is_open()) return ranges;
 
-    // Pasar el flujo del archivo directamente a matjson::parse
     auto parseResult = matjson::parse(file);
-    if (!parseResult.has_value()) {
+    // CORRECCIÓN: Geode::Result utiliza .isOk() para comprobar el éxito
+    if (!parseResult.isOk()) {
         log::error("El archivo JSON tiene un error de corchetes o sintaxis.");
         return ranges;
     }
 
-    auto jsonArray = parseResult.value();
+    // CORRECCIÓN: Geode::Result utiliza .unwrap() para extraer el valor de forma segura
+    auto jsonArray = parseResult.unwrap();
     if (!jsonArray.is_array()) return ranges;
 
     for (const auto& element : jsonArray.as_array()) {
@@ -104,8 +105,6 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
             std::filesystem::create_directories(configDir);
             auto destConfigPath = configDir / "difficulty_meter.json";
 
-            // CORRECCIÓN: Ahora el código es súper corto y limpio. 
-            // Si el archivo no existe en la carpeta config de Android, lo copia directamente desde los archivos del mod.
             if (!std::filesystem::exists(destConfigPath)) {
                 auto resourcePath = Mod::get()->getResourcesDir() / "difficulty_meter.json";
                 if (std::filesystem::exists(resourcePath)) {
