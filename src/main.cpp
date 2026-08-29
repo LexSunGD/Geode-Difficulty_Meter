@@ -1,12 +1,12 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PlayLayer.hpp>
-#include <Geode/loader/Setting.hpp>
+#include <Geode/loader/SettingV3.hpp> // Nueva API de Geode v5
 #include <string>
 #include <vector>
 #include <map>
 #include <algorithm>
 #include <fstream>
-#include <filesystem> // Reemplazo por la librería estándar
+#include <filesystem>
 
 using namespace geode::prelude;
 
@@ -23,7 +23,7 @@ std::map<std::string, std::string> shortToFullName = {
     {"HD", "HardDemon_dif.png"}, {"ID", "InsaneDemon_dif.png"}, {"ExD", "ExtremeDemon_dif.png"}
 };
 
-// Se cambió 'ghc::filesystem' por 'std::filesystem'
+// Función para procesar tu archivo
 std::vector<DifficultyRange> loadRangesFromFile(const std::filesystem::path& path) {
     std::vector<DifficultyRange> ranges;
     if (path.empty() || !std::filesystem::exists(path)) return ranges;
@@ -52,16 +52,19 @@ std::vector<DifficultyRange> loadRangesFromFile(const std::filesystem::path& pat
     return ranges;
 }
 
-// --- CREACIÓN DEL NODO PERSONALIZADO PARA EL MENÚ DE CONFIGURACIÓN ---
-class FilePickSettingNode : public SettingNode {
+// --- CREACIÓN DEL NODO PERSONALIZADO SIGUIENDO EL ESTÁNDAR GEODE V5 (SettingNodeV3) ---
+class FilePickSettingNode : public SettingNodeV3 {
 protected:
     CCLabelBMFont* m_pathLabel = nullptr;
+    std::string m_currentPathValue;
 
-    bool init(SettingValue* value, float width) {
-        if (!SettingNode::init(value, width)) return false;
+    bool init(std::shared_ptr<SettingValueV3> value, float width) {
+        if (!SettingNodeV3::init(value, width)) return false;
 
+        // Establecer un tamaño de contenedor estándar
         this->setContentSize({ width, 40.0f });
 
+        // Crear el botón azul (+) para abrir el explorador de archivos nativo
         auto spr = CCSprite::createWithSpriteFrameName("GJ_plusBtn_001.png");
         spr->setScale(0.65f);
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(FilePickSettingNode::onPickFile));
@@ -71,12 +74,15 @@ protected:
         menu->setPosition({ width - 30.0f, 20.0f });
         this->addChild(menu);
 
-        m_pathLabel = CCLabelBMFont::create("Ningun archivo seleccionado", "chatFont.fnt");
+        // Texto que describe el estado de la ruta seleccionada
+        m_pathLabel = CCLabelBMFont::create("Haz clic en (+) para buscar...", "chatFont.fnt");
         m_pathLabel->setAnchorPoint({ 0.0f, 0.5f });
         m_pathLabel->setPosition({ 20.0f, 20.0f });
         m_pathLabel->setScale(0.5f);
         this->addChild(m_pathLabel);
 
+        // Cargar el valor que esté actualmente guardado en el archivo del mod
+        m_currentPathValue = Mod::get()->getSettingValue<std::string>(value->getKey());
         this->updateLabel();
         return true;
     }
@@ -85,11 +91,10 @@ protected:
         file::FilePickOptions options;
         options.filters = { file::FileFilter("Archivos de Configuracion", {"json", "txt"}) };
 
-        // Aseguramos compatibilidad con std::filesystem
         file::pickFile(file::PickType::OpenFile, options, [this](std::filesystem::path path) {
-            auto value = static_cast<SettingValue*>(m_value);
-            Mod::get()->setSettingValue<std::string>(value->getKey(), path.string());
+            m_currentPathValue = path.string();
             this->updateLabel();
+            // Avisar a Geode que el usuario modificó la opción de manera provisional en la interfaz
             this->dispatchChanged();
         }, []() {
             // Cancelado por el usuario
@@ -97,21 +102,38 @@ protected:
     }
 
     void updateLabel() {
-        std::string currentPath = Mod::get()->getSettingValue<std::string>(m_value->getKey());
-        if (currentPath.empty()) {
+        if (m_currentPathValue.empty()) {
             m_pathLabel->setString("Haz clic en (+) para buscar un archivo...");
         } else {
-            auto filename = std::filesystem::path(currentPath).filename().string();
+            auto filename = std::filesystem::path(m_currentPathValue).filename().string();
             m_pathLabel->setString(filename.c_str());
         }
     }
 
 public:
-    void commit() override { this->dispatchCommitted(); }
-    void hasUncommittedChanges() override { return; }
-    void revert() override { this->updateLabel(); }
+    // --- IMPLEMENTACIÓN OBLIGATORIA DE LOS MÉTODOS PUROS VIRTUALES DE GEODE V5 ---
+    void onCommit() override {
+        // Se ejecuta cuando el usuario presiona "APPLY" o "OK" en el menú
+        Mod::get()->setSettingValue<std::string>(m_value->getKey(), m_currentPathValue);
+    }
 
-    static FilePickSettingNode* create(SettingValue* value, float width) {
+    void onResetToDefault() override {
+        // Se ejecuta cuando el usuario le da al botón de restablecer valores
+        m_currentPathValue = "";
+        this->updateLabel();
+    }
+
+    bool hasUncommittedChanges() const override {
+        // Compara si lo que está en pantalla es diferente a lo guardado en el disco
+        return m_currentPathValue != Mod::get()->getSettingValue<std::string>(m_value->getKey());
+    }
+
+    bool hasNonDefaultValue() const override {
+        // Compara si el valor actual es diferente del valor por defecto (vacío)
+        return !m_currentPathValue.empty();
+    }
+
+    static FilePickSettingNode* create(std::shared_ptr<SettingValueV3> value, float width) {
         auto ret = new FilePickSettingNode();
         if (ret && ret->init(value, width)) {
             ret->autorelease();
@@ -122,13 +144,14 @@ public:
     }
 };
 
-$execute {
-    Mod::get()->registerCustomSettingNode("config-file-path", [](SettingValue* value, float width) {
+// --- REGISTRO DE LA CONFIGURACIÓN USANDO LA NUEVA MACRO DE GEODE V5 ---
+$setting("config-file-path") {
+    return [](std::shared_ptr<SettingValueV3> value, float width) {
         return FilePickSettingNode::create(value, width);
-    });
+    };
 }
 
-// --- CLASE QUE CONTROLA EL MEDIDOR DE DIFICULTAD DENTRO DEL NIVEL ---
+// --- INTERFAZ DEL MEDIDOR EN JUEGO ---
 class $modify(MyDifficultyMeterLayer, PlayLayer) {
     struct Fields {
         CCSprite* m_meterSprite = nullptr;
