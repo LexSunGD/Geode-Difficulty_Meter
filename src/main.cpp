@@ -57,14 +57,19 @@ std::vector<DifficultyRange> parseConfig(const std::string& configStr) {
 }
 
 class $modify(MyDifficultyMeterLayer, PlayLayer) {
-    CCSprite* m_meterSprite = nullptr;
-    std::vector<DifficultyRange> m_parsedRanges;
+    // AQUÍ ESTÁ LA CORRECCIÓN: Todas las variables personalizadas van dentro de 'struct Fields'
+    struct Fields {
+        CCSprite* m_meterSprite = nullptr;
+        std::vector<DifficultyRange> m_parsedRanges;
+    };
 
     bool init(GJGameLevel* level, bool useReplay, bool dontRunLevel) {
         if (!PlayLayer::init(level, useReplay, dontRunLevel)) return false;
 
         // Leer la configuración del mod.json
         std::string userConfig = Mod::get()->getSettingValue<std::string>("meter-config");
+        
+        // Asignamos usando m_fields-> de Geode
         m_fields->m_parsedRanges = parseConfig(userConfig);
 
         // Crear la imagen inicial (NA_dif.png) usando tu ID de creador
@@ -97,7 +102,7 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
         }
         percentage = std::clamp(percentage, 0.0f, 100.0f);
 
-        // Buscar qué dificultad le toca según el porcentaje actual
+        // Buscar qué dificultad le toca según el porcentaje actual usando m_fields
         std::string currentSpriteName = "NA_dif.png"; 
         for (const auto& range : m_fields->m_parsedRanges) {
             if (percentage >= range.minPercent && percentage <= range.maxPercent) {
