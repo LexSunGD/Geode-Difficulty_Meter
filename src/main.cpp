@@ -14,49 +14,65 @@ struct DifficultyRange {
     float maxPercent;
 };
 
-// Función auxiliar para convertir un texto a mayúsculas (para procesar "A" e "Y" sin importar cómo las escribas)
+// Función para convertir a mayúsculas
 std::string toUpper(std::string str) {
     std::transform(str.begin(), str.end(), str.begin(), ::toupper);
     return str;
 }
 
-// Procesa una sola casilla (ej: "0 A 20 Y 50 A 60") y extrae sus rangos numéricos
+// Limpia espacios en blanco al inicio y al final de un texto
+std::string trim(std::string str) {
+    if (str.empty()) return str;
+    size_t first = str.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos) return "";
+    size_t last = str.find_last_not_of(" \t\r\n");
+    return str.substr(first, (last - first + 1));
+}
+
+// Divide una cadena de texto por un delimitador específico
+std::vector<std::string> split(const std::string& str, const std::string& delimiter) {
+    std::vector<std::string> tokens;
+    std::string s = str;
+    size_t pos = 0;
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+        tokens.push_back(s.substr(0, pos));
+        s.erase(0, pos + delimiter.length());
+    }
+    tokens.push_back(s);
+    return tokens;
+}
+
+// Procesa una casilla de Geode de forma ultra-segura
 std::vector<DifficultyRange> parseTextSetting(const std::string& input, const std::string& spriteName) {
     std::vector<DifficultyRange> ranges;
-    if (input.empty()) return ranges;
+    std::string cleanedInput = trim(input);
+    if (cleanedInput.empty()) return ranges;
 
-    std::string upperInput = toUpper(input);
-    std::stringstream ss(upperInput);
-    std::string token;
-    std::vector<std::string> blocks;
+    // Convertir todo a mayúsculas y separar por la letra "Y"
+    std::string upperInput = toUpper(cleanedInput);
+    std::vector<std::string> blocks = split(upperInput, "Y");
 
-    // 1. Separar los bloques por la letra "Y"
-    while (std::getline(ss, token, 'Y')) {
-        // Limpiar espacios en blanco innecesarios
-        token.erase(0, token.find_first_not_of(" "));
-        token.erase(token.find_last_not_of(" ") + 1);
-        if (!token.empty()) {
-            blocks.push_back(token);
-        }
-    }
+    for (auto& block : blocks) {
+        block = trim(block);
+        if (block.empty()) continue;
 
-    // 2. Por cada bloque, buscar la letra "A" para extraer los números
-    for (const auto& block : blocks) {
-        size_t aPos = block.find(" A ");
-        // Si el usuario no puso espacios, buscar la "A" directa por seguridad
-        if (aPos == std::string::npos) aPos = block.find("A"); 
+        // Separar cada bloque por la palabra clave " A "
+        std::vector<std::string> parts = split(block, " A ");
         
-        if (aPos != std::string::npos) {
-            try {
-                std::string minStr = block.substr(0, aPos);
-                std::string maxStr = block.substr(aPos + (block.find(" A ") != std::string::npos ? 3 : 1));
+        // Si el usuario no puso espacios (ej: "0A20"), intentar separar por la "A" directa
+        if (parts.size() < 2) {
+            parts = split(block, "A");
+        }
 
-                float minP = std::stof(minStr);
-                float maxP = std::stof(maxStr);
+        if (parts.size() >= 2) {
+            try {
+                float minP = std::stof(trim(parts[0]));
+                float maxP = std::stof(trim(parts[1]));
 
                 ranges.push_back({spriteName, minP, maxP});
+                log::info("Regla registrada exitosamente -> {}: {}% a {}%", spriteName, minP, maxP);
             } catch (...) {
-                // Ignorar si el bloque contiene errores de escritura
+                log::error("Error de formato al procesar el bloque: '{}'", block);
             }
         }
     }
@@ -72,7 +88,10 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontRunLevel) {
         if (!PlayLayer::init(level, useReplay, dontRunLevel)) return false;
 
-        // Estructura de vinculación: Clave del mod.json -> Nombre del archivo sprite
+        // Limpiar rangos previos por seguridad al reiniciar el nivel
+        m_fields->m_allRanges.clear();
+
+        // Mapa de vinculación con tu mod.json
         std::map<std::string, std::string> settingToSprite = {
             {"diff-na", "NA_dif.png"}, {"diff-auto", "Auto_dif.png"}, {"diff-easy", "Easy_dif.png"},
             {"diff-normal", "Normal_dif.png"}, {"diff-hard", "Hard_dif.png"}, {"diff-harder", "Harder_dif.png"},
@@ -80,22 +99,21 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
             {"diff-hard-demon", "HardDemon_dif.png"}, {"diff-insane-demon", "InsaneDemon_dif.png"}, {"diff-extreme-demon", "ExtremeDemon_dif.png"}
         };
 
-        // Leer cada una de las 12 casillas del menú e indexar sus rangos
+        // Leer e indexar el texto de las 12 casillas del menú de Geode
         for (const auto& [settingKey, spriteName] : settingToSprite) {
             std::string userStr = Mod::get()->getSettingValue<std::string>(settingKey);
             auto extractedRanges = parseTextSetting(userStr, spriteName);
             m_fields->m_allRanges.insert(m_fields->m_allRanges.end(), extractedRanges.begin(), extractedRanges.end());
         }
 
-        // Crear el sprite inicial (Imagen Base Segura para arrancar el nivel)
+        // Crear la imagen base inicial en pantalla
         std::string initialSprite = Mod::get()->getID() + "/NA_dif.png";
         m_fields->m_meterSprite = CCSprite::create(initialSprite.c_str());
         
         if (m_fields->m_meterSprite) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
-            // Posición estándar en la esquina superior derecha
             m_fields->m_meterSprite->setPosition({ winSize.width - 80, winSize.height - 80 });
-            m_fields->m_meterSprite->setScale(1.0f); // Tamaño real exacto sin deformaciones
+            m_fields->m_meterSprite->setScale(1.0f); // Tamaño nativo píxel por píxel
             this->m_uiLayer->addChild(m_fields->m_meterSprite);
         }
 
@@ -106,36 +124,36 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
         PlayLayer::update(dt);
         if (!m_fields->m_meterSprite) return;
 
-        // Calcular el porcentaje exacto de avance
+        // Calcular el porcentaje real del nivel en juego
         float percentage = 0.0f;
         if (this->m_levelLength > 0.0f) {
             percentage = (this->m_player1->m_position.x / this->m_levelLength) * 100.0f;
         }
         percentage = std::clamp(percentage, 0.0f, 100.0f);
 
-        // Buscar qué dificultad le corresponde al porcentaje actual
+        // Buscar qué sprite corresponde al porcentaje actual
         std::string targetSpriteName = "";
         for (const auto& range : m_fields->m_allRanges) {
             if (percentage >= range.minPercent && percentage <= range.maxPercent) {
                 targetSpriteName = range.spriteName;
-                break; // Romper el ciclo de búsqueda: la primera regla válida encontrada gana prioridad
+                break; // Prioridad al primer tramo coincidente encontrado
             }
         }
 
-        // SISTEMA DE INVISIBILIDAD: Si el porcentaje actual no está cubierto por ninguna regla, ocultar
+        // Si el porcentaje cae en un tramo vacío o no configurado, se vuelve invisible
         if (targetSpriteName.empty()) {
             m_fields->m_meterSprite->setVisible(false);
             return;
         }
 
-        // Si es un rango válido, encender visibilidad y renderizar la textura correspondiente
+        // Actualizar la textura manteniendo las proporciones exactas
         m_fields->m_meterSprite->setVisible(true);
         std::string finalPath = Mod::get()->getID() + "/" + targetSpriteName;
         auto texture = CCTextureCache::sharedTextureCache()->addImage(finalPath.c_str(), false);
         
         if (texture) {
             m_fields->m_meterSprite->setTexture(texture);
-            m_fields->m_meterSprite->setScale(1.0f); // Respetar píxel por píxel la altura/ancho de cada cara
+            m_fields->m_meterSprite->setScale(1.0f);
         }
     }
 };
