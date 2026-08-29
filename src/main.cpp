@@ -107,7 +107,7 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
         }
 
         // Crear la imagen base inicial en pantalla
-        std::string initialSprite = Mod::get()->getID() + "/NA_dif.png";
+        std::string initialSprite = Mod::get()->getID() + "/ExtremeDemon_dif.png";
         m_fields->m_meterSprite = CCSprite::create(initialSprite.c_str());
         
         if (m_fields->m_meterSprite) {
