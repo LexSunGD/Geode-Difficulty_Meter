@@ -1,6 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PlayLayer.hpp>
-#include <Geode/loader/SettingNode.hpp>
+#include <Geode/loader/Setting.hpp> // CORRECCIÓN AQUÍ: Ruta actualizada de Geode v5
 #include <string>
 #include <vector>
 #include <map>
