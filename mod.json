@@ -10,7 +10,7 @@
 	"version": "1.0.0",
 	"name": "Difficulty Meter",
 	"developer": "LexSunGD",
-	"description": "Edita tus tramos dinámicamente modificando la línea de texto en el archivo .txt de la carpeta config.",
+	"description": "Edita tus tramos dinámicamente modificando el archivo .json en la carpeta config.",
 	"repository": "githubcom",
 	"tags": ["interface", "utility"],
 	"resources": {
@@ -18,7 +18,7 @@
 			"resources/*_dif.png"
 		],
 		"files": [
-			"resources/difficulty_meter.txt"
+			"resources/difficulty_meter.json"
 		]
 	}
 }
