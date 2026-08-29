@@ -10,7 +10,7 @@
 	"version": "1.0.0",
 	"name": "Difficulty Meter",
 	"developer": "LexSunGD",
-	"description": "Edita tus tramos dinámicamente modificando el archivo .json en la carpeta config.",
+	"description": "description",
 	"repository": "githubcom",
 	"tags": ["interface", "utility"],
 	"resources": {
