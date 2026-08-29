@@ -19,20 +19,23 @@ std::map<std::string, std::string> nameToSprite = {
     {"NA", "NA_dif.png"}, {"AUTO", "Auto_dif.png"}, {"EASY", "Easy_dif.png"},
     {"NORMAL", "Normal_dif.png"}, {"HARD", "Hard_dif.png"}, {"HARDER", "Harder_dif.png"},
     {"INSANE", "Insane_dif.png"}, 
-    {"EASYDEMON", "EasyDemon_dif.png"}, {"EASY DEMON", "EasyDemon_dif.png"},
-    {"MEDIUMDEMON", "MediumDemon_dif.png"}, {"MEDIUM DEMON", "MediumDemon_dif.png"},
-    {"HARDDEMON", "HardDemon_dif.png"}, {"HARD DEMON", "HardDemon_dif.png"},
-    {"INSANEDEMON", "InsaneDemon_dif.png"}, {"INSANE DEMON", "InsaneDemon_dif.png"},
-    {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME DEMON", "ExtremeDemon_dif.png"}
+    {"EASYDEMON", "EasyDemon_dif.png"}, {"EASY_DEMON", "EasyDemon_dif.png"},
+    {"MEDIUMDEMON", "MediumDemon_dif.png"}, {"MEDIUM_DEMON", "MediumDemon_dif.png"},
+    {"HARDDEMON", "HardDemon_dif.png"}, {"HARD_DEMON", "HardDemon_dif.png"},
+    {"INSANEDEMON", "InsaneDemon_dif.png"}, {"INSANE_DEMON", "InsaneDemon_dif.png"},
+    {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME_DEMON", "ExtremeDemon_dif.png"}
 };
 
-// Lector JSON nativo e inmune a imperfecciones de almacenamiento
+// Lector JSON nativo corregido para Geode v5
 std::vector<DifficultyRange> loadConfigFromJson(const std::filesystem::path& path) {
     std::vector<DifficultyRange> ranges;
     if (!std::filesystem::exists(path)) return ranges;
 
-    // Procesar archivo usando matjson de Geode
-    auto parseResult = matjson::parseFile(path);
+    std::ifstream file(path);
+    if (!file.is_open()) return ranges;
+
+    // Pasar el flujo del archivo directamente a matjson::parse
+    auto parseResult = matjson::parse(file);
     if (!parseResult.has_value()) {
         log::error("El archivo JSON tiene un error de corchetes o sintaxis.");
         return ranges;
@@ -41,20 +44,16 @@ std::vector<DifficultyRange> loadConfigFromJson(const std::filesystem::path& pat
     auto jsonArray = parseResult.value();
     if (!jsonArray.is_array()) return ranges;
 
-    // Recorrer la lista ordenada []
     for (const auto& element : jsonArray.as_array()) {
         if (!element.is_object()) continue;
         auto obj = element.as_object();
 
-        // Validar que existan todas las llaves necesarias dentro del bloque {}
         if (obj.count("dificultad") && obj.count("inicio") && obj.count("fin")) {
             std::string diffName = obj["dificultad"].as_string();
             
-            // matjson procesa números como flotantes o enteros de forma automática
             float minP = static_cast<float>(obj["inicio"].as_double());
             float maxP = static_cast<float>(obj["fin"].as_double());
 
-            // Traducir nombre a la imagen correspondiente
             std::transform(diffName.begin(), diffName.end(), diffName.begin(), ::toupper);
             if (nameToSprite.count(diffName) != 0) {
                 ranges.push_back({nameToSprite[diffName], minP, maxP});
@@ -98,7 +97,6 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
         PlayLayer::update(dt);
         if (!m_fields->m_meterSprite) return;
 
-        // Cargar el JSON de forma segura en el primer frame de juego en Android
         if (!m_fields->m_configLoaded) {
             m_fields->m_configLoaded = true;
 
@@ -106,15 +104,15 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
             std::filesystem::create_directories(configDir);
             auto destConfigPath = configDir / "difficulty_meter.json";
 
+            // CORRECCIÓN: Ahora el código es súper corto y limpio. 
+            // Si el archivo no existe en la carpeta config de Android, lo copia directamente desde los archivos del mod.
             if (!std::filesystem::exists(destConfigPath)) {
                 auto resourcePath = Mod::get()->getResourcesDir() / "difficulty_meter.json";
                 if (std::filesystem::exists(resourcePath)) {
                     std::filesystem::copy_file(resourcePath, destConfigPath);
+                    log::info("Plantilla JSON copiada exitosamente a la carpeta config.");
                 } else {
-                    // Fallback de respaldo por si no se copia el recurso
-                    std::ofstream outfile(destConfigPath);
-                    outfile << "[\n  { \"dificultad\": \"Easy\", \"inicio\": 0, \"fin\": 10 }\n]";
-                    outfile.close();
+                    log::error("No se encontro el archivo difficulty_meter.json en los recursos del mod.");
                 }
             }
 
