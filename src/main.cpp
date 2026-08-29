@@ -7,7 +7,6 @@
 #include <fstream>
 #include <filesystem>
 #include <sstream>
-#include <cctype>
 
 using namespace geode::prelude;
 
@@ -25,13 +24,13 @@ std::map<std::string, std::string> nameToSprite = {
     {"MEDIUMDEMON", "MediumDemon_dif.png"}, {"MEDIUM DEMON", "MediumDemon_dif.png"},
     {"HARDDEMON", "HardDemon_dif.png"}, {"HARD DEMON", "HardDemon_dif.png"},
     {"INSANEDEMON", "InsaneDemon_dif.png"}, {"INSANE DEMON", "InsaneDemon_dif.png"},
-    {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME DEMON", "ExtremeDemon_dif.png"}
+    {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME_DEMON", "ExtremeDemon_dif.png"}
 };
 
-// Limpiador agresivo de caracteres basura y saltos de línea de Android
-std::string cleanInputString(std::string str) {
+// Limpiador corregido: SOLAMENTE quita comillas y saltos de linea invisibles de Android (\r, \n)
+std::string cleanAndroidStr(std::string str) {
     str.erase(std::remove_if(str.begin(), str.end(), [](unsigned char c) {
-        return c == '\r' || c == '\n' || c == '\"' || c == 'f' || c == 'F' || c == '.';
+        return c == '\r' || c == '\n' || c == '\"';
     }), str.end());
     return str;
 }
@@ -44,46 +43,49 @@ std::vector<DifficultyRange> loadConfigFromTxt(const std::filesystem::path& path
     std::string content;
     if (!std::getline(file, content)) return ranges;
     
-    content = cleanInputString(content);
+    content = cleanAndroidStr(content);
     if (content.empty()) return ranges;
 
     std::stringstream ss(content);
     std::string item;
-    // 1. Separar bloques independientes por las comas
+    // 1. Separar bloques por comas
     while (std::getline(ss, item, ',')) {
         if (item.empty()) continue;
 
-        // Separar las palabras de los números usando flujos de extracción limpios
         std::stringstream itemStream(item);
-        std::string word, fullDiffName = "", rangePart = "";
+        std::vector<std::string> tokens;
+        std::string token;
 
-        // Leer palabra por palabra hasta encontrar el bloque del rango (ej: "11-23")
-        while (itemStream >> word) {
-            if (word.find('-') != std::string::npos || std::isdigit(static_cast<unsigned char>(word[0]))) {
-                rangePart = word;
-                break;
-            } else {
-                if (!fullDiffName.empty()) fullDiffName += " ";
-                fullDiffName += word;
-            }
+        // Extraer todos los fragmentos separados por espacios dentro del bloque
+        while (itemStream >> token) {
+            tokens.push_back(token);
         }
 
-        if (fullDiffName.empty() || rangePart.empty()) continue;
+        // Un bloque valido debe tener al menos el nombre de la dificultad y 2 numeros (ej: Easy 0 10.5)
+        if (tokens.size() < 3) continue;
 
-        // Convertir el nombre de la dificultad a mayúsculas
-        std::transform(fullDiffName.begin(), fullDiffName.end(), fullDiffName.begin(), ::toupper);
-        if (nameToSprite.count(fullDiffName) == 0) continue;
-        std::string targetSprite = nameToSprite[fullDiffName];
+        // Los dos ultimos elementos del bloque son OBLIGATORIAMENTE los porcentajes min y max
+        std::string maxStr = tokens.back(); tokens.pop_back();
+        std::string minStr = tokens.back(); tokens.pop_back();
 
-        // Procesar los números del rango de forma aislada e inmune a espacios
-        size_t dashPos = rangePart.find('-');
-        if (dashPos != std::string::npos) {
-            try {
-                float minP = std::stof(rangePart.substr(0, dashPos));
-                float maxP = std::stof(rangePart.substr(dashPos + 1));
-                ranges.push_back({targetSprite, minP, maxP});
-            } catch (...) {}
+        // Todo lo que quedo antes en el vector forma el nombre de la dificultad (soporta espacios)
+        std::string diffName = "";
+        for (size_t i = 0; i < tokens.size(); ++i) {
+            if (i > 0) diffName += " ";
+            diffName += tokens[i];
         }
+
+        // Convertir nombre a mayusculas para buscar en el mapa
+        std::transform(diffName.begin(), diffName.end(), diffName.begin(), ::toupper);
+        if (nameToSprite.count(diffName) == 0) continue;
+        std::string targetSprite = nameToSprite[diffName];
+
+        try {
+            // Conversion limpia a decimales flotantes reales sin interferencia de letras o guiones
+            float minP = std::stof(minStr);
+            float maxP = std::stof(maxStr);
+            ranges.push_back({targetSprite, minP, maxP});
+        } catch (...) {}
     }
     return ranges;
 }
@@ -110,10 +112,7 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             m_fields->m_meterSprite->setPosition({ winSize.width - 60, winSize.height - 40 });
             m_fields->m_meterSprite->setScale(1.0f);
-            
-            // Inicia oculto. Si la traducción tiene éxito, el update lo encenderá de inmediato
             m_fields->m_meterSprite->setVisible(false); 
-            
             this->addChild(m_fields->m_meterSprite, 100);
         }
 
@@ -138,7 +137,8 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
                     std::filesystem::copy_file(resourcePath, destConfigPath);
                 } else {
                     std::ofstream outfile(destConfigPath);
-                    outfile << "Easy 0-10, Normal 11-23, InsaneDemon 24-50, Easy 51-76, Harder 77-91, Auto 92-100";
+                    // Formato nuevo limpio sin guiones en el archivo inicial por si acaso
+                    outfile << "Easy 0 10, Normal 11 23, InsaneDemon 24 50, Easy 51 76, Harder 77 91, Auto 92 100";
                     outfile.close();
                 }
             }
