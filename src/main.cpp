@@ -7,6 +7,7 @@
 #include <fstream>
 #include <filesystem>
 #include <sstream>
+#include <cctype>
 
 using namespace geode::prelude;
 
@@ -27,6 +28,68 @@ std::map<std::string, std::string> nameToSprite = {
     {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME_DEMON", "ExtremeDemon_dif.png"}
 };
 
+// Limpiador agresivo de caracteres de control de Android
+std::string cleanInputString(std::string str) {
+    str.erase(std::remove_if(str.begin(), str.end(), [](unsigned char c) {
+        return c == '\r' || c == '\n' || c == '\"' || c == 'f' || c == 'F' || c == '.';
+    }), str.end());
+    return str;
+}
+
+std::vector<DifficultyRange> loadConfigFromTxt(const std::filesystem::path& path) {
+    std::vector<DifficultyRange> ranges;
+    if (!std::filesystem::exists(path)) return ranges;
+
+    std::ifstream file(path);
+    std::string content;
+    if (!std::getline(file, content)) return ranges;
+    
+    content = cleanInputString(content);
+    if (content.empty()) return ranges;
+
+    std::stringstream ss(content);
+    std::string item;
+    // 1. Separar bloques por comas
+    while (std::getline(ss, item, ',')) {
+        if (item.empty()) continue;
+
+        // CORRECCIÓN RADICAL: Buscar dónde empieza el primer número (0-9) en el bloque
+        size_t firstDigitPos = std::string::npos;
+        for (size_t i = 0; i < item.length(); ++i) {
+            if (std::isdigit(static_cast<unsigned char>(item[i]))) {
+                firstDigitPos = i;
+                break;
+            }
+        }
+
+        // Si no hay números en el bloque, no es una regla válida
+        if (firstDigitPos == std::string::npos || firstDigitPos == 0) continue;
+
+        // Separar limpiamente el nombre de la dificultad y el tramo numérico
+        std::string diffName = item.substr(0, firstDigitPos);
+        std::string rangePart = item.substr(firstDigitPos);
+
+        // Limpiar espacios remanentes alrededor de las palabras
+        diffName.erase(0, diffName.find_first_not_of(" \t"));
+        diffName.erase(diffName.find_last_not_of(" \t") + 1);
+        
+        std::transform(diffName.begin(), diffName.end(), diffName.begin(), ::toupper);
+        if (nameToSprite.count(diffName) == 0) continue;
+        std::string targetSprite = nameToSprite[diffName];
+
+        // Procesar los números usando el guion '-'
+        size_t dashPos = rangePart.find('-');
+        if (dashPos != std::string::npos) {
+            try {
+                float minP = std::stof(rangePart.substr(0, dashPos));
+                float maxP = std::stof(rangePart.substr(dashPos + 1));
+                ranges.push_back({targetSprite, minP, maxP});
+            } catch (...) {}
+        }
+    }
+    return ranges;
+}
+
 class $modify(MyDifficultyMeterLayer, PlayLayer) {
     struct Fields {
         CCSprite* m_meterSprite = nullptr;
@@ -42,17 +105,17 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
         m_fields->m_lastLoadedSprite = "";
         m_fields->m_configLoaded = false;
 
-        // Crear el sprite inicial
         std::string initialSprite = Mod::get()->getID() + "/NA_dif.png";
         m_fields->m_meterSprite = CCSprite::create(initialSprite.c_str());
         
         if (m_fields->m_meterSprite) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
+            // Posición limpia en la esquina superior derecha, como en tu captura
             m_fields->m_meterSprite->setPosition({ winSize.width - 60, winSize.height - 40 });
             m_fields->m_meterSprite->setScale(1.0f);
             
-            // QUITADO LO INVISIBLE: Ahora el sprite inicia encendido y visible al 100%
-            m_fields->m_meterSprite->setVisible(true); 
+            // VOLVEMOS A HACERLO INVISIBLE: Si la traducción tiene éxito, el update lo encenderá al instante
+            m_fields->m_meterSprite->setVisible(false); 
             
             this->addChild(m_fields->m_meterSprite, 100);
         }
@@ -83,43 +146,10 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
                 }
             }
 
-            std::ifstream file(destConfigPath);
-            std::string content;
-            if (std::getline(file, content)) {
-                content.erase(std::remove_if(content.begin(), content.end(), [](unsigned char c) {
-                    return c == '\r' || c == '\n' || c == '\"' || c == 'f' || c == 'F';
-                }), content.end());
-
-                std::stringstream ss(content);
-                std::string item;
-                while (std::getline(ss, item, ',')) {
-                    size_t first = item.find_first_not_of(" \t");
-                    size_t last = item.find_last_not_of(" \t."); 
-                    if (first == std::string::npos) continue;
-                    item = item.substr(first, (last - first + 1));
-
-                    size_t lastSpace = item.find_last_of(" \t");
-                    if (lastSpace == std::string::npos) continue;
-
-                    std::string diffName = item.substr(0, lastSpace);
-                    std::string rangePart = item.substr(lastSpace + 1);
-
-                    std::transform(diffName.begin(), diffName.end(), diffName.begin(), ::toupper);
-                    if (nameToSprite.count(diffName) == 0) continue;
-                    std::string targetSprite = nameToSprite[diffName];
-
-                    size_t dashPos = rangePart.find('-');
-                    if (dashPos != std::string::npos) {
-                        try {
-                            float minP = std::stof(rangePart.substr(0, dashPos));
-                            float maxP = std::stof(rangePart.substr(dashPos + 1));
-                            m_fields->m_allRanges.push_back({targetSprite, minP, maxP});
-                        } catch (...) {}
-                    }
-                }
-            }
+            m_fields->m_allRanges = loadConfigFromTxt(destConfigPath);
         }
 
+        // Obtener porcentaje de Geode
         float percentage = this->getCurrentPercent();
         percentage = std::clamp(percentage, 0.0f, 100.0f);
 
@@ -131,15 +161,14 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
             }
         }
 
-        // QUITADO LO INVISIBLE: Si no hay tramo, se queda puesta la última imagen cargada
-        // o la de NA por defecto en lugar de apagarse.
+        // Invisibilidad reactiva en zonas vacías
         if (targetSpriteName.empty()) {
-            if (m_fields->m_lastLoadedSprite.empty()) {
-                targetSpriteName = "EasyDemon_dif.png";
-            } else {
-                targetSpriteName = m_fields->m_lastLoadedSprite;
-            }
+            m_fields->m_meterSprite->setVisible(false);
+            m_fields->m_lastLoadedSprite = "";
+            return;
         }
+
+        m_fields->m_meterSprite->setVisible(true);
 
         if (m_fields->m_lastLoadedSprite != targetSpriteName) {
             std::string finalPath = Mod::get()->getID() + "/" + targetSpriteName;
