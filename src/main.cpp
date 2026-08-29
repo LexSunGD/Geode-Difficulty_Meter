@@ -21,45 +21,36 @@ std::map<std::string, std::string> nameToSprite = {
     {"INSANE", "Insane_dif.png"}, 
     {"EASYDEMON", "EasyDemon_dif.png"}, {"EASY_DEMON", "EasyDemon_dif.png"},
     {"MEDIUMDEMON", "MediumDemon_dif.png"}, {"MEDIUM_DEMON", "MediumDemon_dif.png"},
-    {"HARDDEMON", "HardDemon_dif.png"}, {"HARD__DEMON", "HardDemon_dif.png"},
+    {"HARDDEMON", "HardDemon_dif.png"}, {"HARD_DEMON", "HardDemon_dif.png"},
     {"INSANEDEMON", "InsaneDemon_dif.png"}, {"INSANE_DEMON", "InsaneDemon_dif.png"},
     {"EXTREMEDEMON", "ExtremeDemon_dif.png"}, {"EXTREME_DEMON", "ExtremeDemon_dif.png"}
 };
 
-// Lector JSON nativo corregido para Geode v5
+// Lector JSON ultra compacto usando el nuevo sistema de Geode v5 (.as<T>())
 std::vector<DifficultyRange> loadConfigFromJson(const std::filesystem::path& path) {
     std::vector<DifficultyRange> ranges;
-    if (!std::filesystem::exists(path)) return ranges;
-
     std::ifstream file(path);
     if (!file.is_open()) return ranges;
 
     auto parseResult = matjson::parse(file);
-    // CORRECCIÓN: Geode::Result utiliza .isOk() para comprobar el éxito
-    if (!parseResult.isOk()) {
-        log::error("El archivo JSON tiene un error de corchetes o sintaxis.");
-        return ranges;
-    }
+    if (!parseResult.isOk()) return ranges;
 
-    // CORRECCIÓN: Geode::Result utiliza .unwrap() para extraer el valor de forma segura
-    auto jsonArray = parseResult.unwrap();
-    if (!jsonArray.is_array()) return ranges;
-
-    for (const auto& element : jsonArray.as_array()) {
-        if (!element.is_object()) continue;
-        auto obj = element.as_object();
-
-        if (obj.count("dificultad") && obj.count("inicio") && obj.count("fin")) {
-            std::string diffName = obj["dificultad"].as_string();
-            
-            float minP = static_cast<float>(obj["inicio"].as_double());
-            float maxP = static_cast<float>(obj["fin"].as_double());
+    try {
+        // En Geode v5 los arrays se convierten directamente a vectores con .as<std::vector>()
+        auto jsonVector = parseResult.unwrap().as<std::vector<matjson::Value>>();
+        
+        for (const auto& element : jsonVector) {
+            std::string diffName = element["dificultad"].as<std::string>();
+            float minP = static_cast<float>(element["inicio"].as<double>());
+            float maxP = static_cast<float>(element["fin"].as<double>());
 
             std::transform(diffName.begin(), diffName.end(), diffName.begin(), ::toupper);
             if (nameToSprite.count(diffName) != 0) {
                 ranges.push_back({nameToSprite[diffName], minP, maxP});
             }
         }
+    } catch (...) {
+        log::error("Error de formato estructurado dentro del archivo JSON.");
     }
     return ranges;
 }
@@ -109,9 +100,17 @@ class $modify(MyDifficultyMeterLayer, PlayLayer) {
                 auto resourcePath = Mod::get()->getResourcesDir() / "difficulty_meter.json";
                 if (std::filesystem::exists(resourcePath)) {
                     std::filesystem::copy_file(resourcePath, destConfigPath);
-                    log::info("Plantilla JSON copiada exitosamente a la carpeta config.");
                 } else {
-                    log::error("No se encontro el archivo difficulty_meter.json en los recursos del mod.");
+                    std::ofstream outfile(destConfigPath);
+                    outfile << "[\n"
+                            << "  { \"dificultad\": \"Easy\", \"inicio\": 0, \"fin\": 10.5 },\n"
+                            << "  { \"dificultad\": \"Normal\", \"inicio\": 11, \"fin\": 23 },\n"
+                            << "  { \"dificultad\": \"Insane Demon\", \"inicio\": 24, \"fin\": 50 },\n"
+                            << "  { \"dificultad\": \"Easy\", \"inicio\": 51, \"fin\": 76 },\n"
+                            << "  { \"dificultad\": \"Harder\", \"inicio\": 77, \"fin\": 91 },\n"
+                            << "  { \"dificultad\": \"Auto\", \"inicio\": 92, \"fin\": 100 }\n"
+                            << "]";
+                    outfile.close();
                 }
             }
 
