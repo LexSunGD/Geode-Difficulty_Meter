@@ -1,1 +1,0 @@
-Easy 0 10.5, Normal 11 23, Insane Demon 23.1 50, Easy 51 76, Harder 77 91.8, Auto 92 100

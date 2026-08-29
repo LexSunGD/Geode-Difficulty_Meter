@@ -1,0 +1,8 @@
+[
+  { "dificultad": "Easy", "inicio": 0, "fin": 10.5 },
+  { "dificultad": "Normal", "inicio": 11, "fin": 23 },
+  { "dificultad": "Insane Demon", "inicio": 24, "fin": 50 },
+  { "dificultad": "Easy", "inicio": 51, "fin": 76 },
+  { "dificultad": "Harder", "inicio": 77, "fin": 91 },
+  { "dificultad": "Auto", "inicio": 92, "fin": 100 }
+]
