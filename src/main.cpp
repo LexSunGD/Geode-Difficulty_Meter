@@ -5,25 +5,25 @@ using namespace geode::prelude;
 
 class $modify(MyPlayLayer, PlayLayer) {
     struct Fields {
-        CCSprite* m_customDifficultyMeter = nullptr;
+        CCLabelBMFont* m_customDifficultyLabel = nullptr;
     };
 
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // "difficulty_01_001.png" es la dificultad Easy oficial del juego
-        m_fields->m_customDifficultyMeter = CCSprite::createWithSpriteFrameName("difficulty_01_001.png");
+        // Crear una etiqueta de texto usando la fuente nativa del juego
+        m_fields->m_customDifficultyLabel = CCLabelBMFont::create("Cargando...", "bigFont.fnt");
         
-        if (m_fields->m_customDifficultyMeter) {
+        if (m_fields->m_customDifficultyLabel) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Colocar arriba en el centro
-            m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 35.0f });
-            m_fields->m_customDifficultyMeter->setScale(0.8f);
-            m_fields->m_customDifficultyMeter->setID("custom-difficulty-meter"_spr);
+            // Posicionar en la parte superior central de la pantalla
+            m_fields->m_customDifficultyLabel->setPosition({ winSize.width / 2, winSize.height - 40.0f });
+            m_fields->m_customDifficultyLabel->setScale(0.6f);
+            m_fields->m_customDifficultyLabel->setID("custom-difficulty-label"_spr);
 
             if (m_uiLayer) {
-                m_uiLayer->addChild(m_fields->m_customDifficultyMeter);
+                m_uiLayer->addChild(m_fields->m_customDifficultyLabel);
             }
         }
 
@@ -33,30 +33,29 @@ class $modify(MyPlayLayer, PlayLayer) {
     void update(float dt) {
         PlayLayer::update(dt);
 
-        if (!m_fields->m_customDifficultyMeter || m_levelLength <= 0.0f) return;
+        if (!m_fields->m_customDifficultyLabel || m_levelLength <= 0.0f) return;
 
         float percentage = (m_player1->m_position.x / m_levelLength) * 100.0f;
         if (percentage > 100.0f) percentage = 100.0f;
         if (percentage < 0.0f) percentage = 0.0f;
 
-        std::string spriteName = "difficulty_01_001.png";
+        std::string diffText = "Normal";
 
-        // Lógica adaptada usando nombres de archivos nativos de Geometry Dash (11 estados)
-        if (percentage < 9.0f) { spriteName = "status_01_001.png"; } // Cara feliz (N/A)
-        else if (percentage < 18.0f) { spriteName = "difficulty_01_001.png"; } // Easy
-        else if (percentage < 27.0f) { spriteName = "difficulty_02_001.png"; } // Normal
-        else if (percentage < 36.0f) { spriteName = "difficulty_03_001.png"; } // Hard
-        else if (percentage < 45.0f) { spriteName = "difficulty_04_001.png"; } // Harder
-        else if (percentage < 54.0f) { spriteName = "difficulty_05_001.png"; } // Insane
-        else if (percentage < 63.0f) { spriteName = "difficulty_07_001.png"; } // Easy Demon
-        else if (percentage < 72.0f) { spriteName = "difficulty_08_001.png"; } // Medium Demon
-        else if (percentage < 81.0f) { spriteName = "difficulty_09_001.png"; } // Hard Demon
-        else if (percentage < 90.0f) { spriteName = "difficulty_10_001.png"; } // Insane Demon
-        else { spriteName = "difficulty_06_001.png"; } // Extreme Demon
+        // Lógica de porcentajes asignando texto directo
+        if (percentage < 8.33f) { diffText = "N/A"; }
+        else if (percentage < 16.66f) { diffText = "Auto"; }
+        else if (percentage < 25.0f) { diffText = "Easy"; }
+        else if (percentage < 33.33f) { diffText = "Normal"; }
+        else if (percentage < 41.66f) { diffText = "Hard"; }
+        else if (percentage < 50.0f) { diffText = "Harder"; }
+        else if (percentage < 58.33f) { diffText = "Insane"; }
+        else if (percentage < 66.66f) { diffText = "Easy Demon"; }
+        else if (percentage < 75.0f) { diffText = "Medium Demon"; }
+        else if (percentage < 83.33f) { diffText = "Hard Demon"; }
+        else if (percentage < 91.66f) { diffText = "Insane Demon"; }
+        else { diffText = "Extreme Demon"; }
 
-        auto spriteFrame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(spriteName.c_str());
-        if (spriteFrame) {
-            m_fields->m_customDifficultyMeter->setDisplayFrame(spriteFrame);
-        }
+        // Actualizar el texto en pantalla
+        m_fields->m_customDifficultyLabel->setString(diffText.c_str());
     }
 };
