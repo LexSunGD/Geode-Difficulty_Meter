@@ -1,32 +1,21 @@
 {
-	"geode": "5.10.1",
-	"gd": {
-		"win": "2.2081",
-		"android": "2.2081",
-		"mac": "2.2081",
-		"ios": "2.2081"
-	},
-	"id": "lexsungd.difficulty_meter",
-	"version": "1.0.0",
-	"name": "Difficulty Meter",
-	"developer": "LexSunGD",
-	"description": "description",
-	"repository": "githubcom",
-	"tags": ["interface", "utility"],
-	"resources": {
-		"files": [
-			"NA_dif.png",
-			"Auto_dif.png",
-			"Easy_dif.png",
-			"Normal_dif.png",
-			"Hard_dif.png",
-			"Harder_dif.png",
-			"Insane_dif.png",
-			"EasyDemon_dif.png",
-			"MediumDemon_dif.png",
-			"HardDemon_dif.png",
-			"InsaneDemon_dif.png",
-			"ExtremeDemon_dif.png"
-		]
-	}
+    "geode": "5.10.1",
+    "gd": {
+        "win": "2.2081",
+        "android": "2.2081",
+        "mac": "2.2081",
+        "ios": "2.2081"
+    },
+    "id": "lexsungd.difficulty_meter",
+    "version": "1.0.0",
+    "name": "Difficulty Meter",
+    "developer": "LexSunGD",
+    "description": "Cambia el medidor de dificultad dinámicamente según el porcentaje del nivel.",
+    "repository": "https://github.com",
+    "tags": ["interface", "utility"],
+    "resources": {
+        "sprites": [
+            "*_dif.png"
+        ]
+    }
 }
