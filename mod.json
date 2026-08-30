@@ -14,8 +14,19 @@
 	"repository": "githubcom",
 	"tags": ["interface", "utility"],
 	"resources": {
-		"sprites": [
-			"*_dif.png"
+		"files": [
+			"NA_dif.png",
+			"Auto_dif.png",
+			"Easy_dif.png",
+			"Normal_dif.png",
+			"Hard_dif.png",
+			"Harder_dif.png",
+			"Insane_dif.png",
+			"EasyDemon_dif.png",
+			"MediumDemon_dif.png",
+			"HardDemon_dif.png",
+			"InsaneDemon_dif.png",
+			"ExtremeDemon_dif.png"
 		]
 	}
 }
