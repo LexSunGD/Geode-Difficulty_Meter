@@ -11,13 +11,13 @@ class $modify(MyPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // Crear etiqueta de texto con la tipografía oficial del juego
-        m_fields->m_customDifficultyLabel = CCLabelBMFont::create("Cargando...", "bigFont.fnt");
+        // Crear la etiqueta de texto inicialmente limpia
+        m_fields->m_customDifficultyLabel = CCLabelBMFont::create("N/A", "bigFont.fnt");
         
         if (m_fields->m_customDifficultyLabel) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Posicionar arriba en el centro
+            // Ubicar en la parte superior central
             m_fields->m_customDifficultyLabel->setPosition({ winSize.width / 2, winSize.height - 40.0f });
             m_fields->m_customDifficultyLabel->setScale(0.6f);
             m_fields->m_customDifficultyLabel->setID("custom-difficulty-label"_spr);
@@ -30,17 +30,18 @@ class $modify(MyPlayLayer, PlayLayer) {
         return true;
     }
     
-    void update(float dt) {
-        PlayLayer::update(dt);
+    // Forzamos la actualización enganchándonos directamente al evento de la barra de progreso
+    void updateProgressAmount() {
+        PlayLayer::updateProgressAmount(); // Ejecuta la actualización nativa de la barra
 
         if (!m_fields->m_customDifficultyLabel) return;
 
-        // Usamos el método oficial de Geometry Dash para obtener el porcentaje preciso
+        // Obtenemos el porcentaje directamente calculado de forma segura por el juego
         float percentage = this->getCurrentPercent();
 
         std::string diffText = "Normal";
 
-        // Lógica de porcentajes limpia en una sola línea por cada condicional
+        // Lógica ordenada en una sola línea por cada condicional { }
         if (percentage < 8.33f) { diffText = "N/A"; }
         else if (percentage < 16.66f) { diffText = "Auto"; }
         else if (percentage < 25.0f) { diffText = "Easy"; }
@@ -54,7 +55,7 @@ class $modify(MyPlayLayer, PlayLayer) {
         else if (percentage < 91.66f) { diffText = "Insane Demon"; }
         else { diffText = "Extreme Demon"; }
 
-        // Refrescar el texto en pantalla en cada frame de ejecución
+        // Actualizar el valor de la cadena
         m_fields->m_customDifficultyLabel->setString(diffText.c_str());
     }
 };
