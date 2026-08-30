@@ -14,7 +14,7 @@
 	"repository": "githubcom",
 	"tags": ["interface", "utility"],
 	"resources": {
-		"files": [
+		"sprites": [
 			"*_dif.png"
 		]
 	}
