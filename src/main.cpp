@@ -4,7 +4,6 @@
 using namespace geode::prelude;
 
 class $modify(MyPlayLayer, PlayLayer) {
-    // Estructura obligatoria en Geode para añadir variables a un hook
     struct Fields {
         CCSprite* m_customDifficultyMeter = nullptr;
     };
@@ -12,17 +11,15 @@ class $modify(MyPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // Crear el sprite usando el caché de Geode
-        m_fields->m_customDifficultyMeter = CCSprite::createWithSpriteFrameName("NA_dif.png");
+        // "difficulty_01_001.png" es la dificultad Easy oficial del juego
+        m_fields->m_customDifficultyMeter = CCSprite::createWithSpriteFrameName("difficulty_01_001.png");
         
         if (m_fields->m_customDifficultyMeter) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Posicionar en la parte superior central
-            m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 30.0f });
-            
-            // Forzar a que mantenga exactamente el tamaño de escala correcto (Ej: 0.5f o 1.0f según tu preferencia visual)
-            m_fields->m_customDifficultyMeter->setScale(0.5f);
+            // Colocar arriba en el centro
+            m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 35.0f });
+            m_fields->m_customDifficultyMeter->setScale(0.8f);
             m_fields->m_customDifficultyMeter->setID("custom-difficulty-meter"_spr);
 
             if (m_uiLayer) {
@@ -42,20 +39,20 @@ class $modify(MyPlayLayer, PlayLayer) {
         if (percentage > 100.0f) percentage = 100.0f;
         if (percentage < 0.0f) percentage = 0.0f;
 
-        std::string spriteName = "Normal_dif.png";
+        std::string spriteName = "difficulty_01_001.png";
 
-        if (percentage < 8.33f) { spriteName = "NA_dif.png"; }
-        else if (percentage < 16.66f) { spriteName = "Auto_dif.png"; }
-        else if (percentage < 25.0f) { spriteName = "Easy_dif.png"; }
-        else if (percentage < 33.33f) { spriteName = "Normal_dif.png"; }
-        else if (percentage < 41.66f) { spriteName = "Hard_dif.png"; }
-        else if (percentage < 50.0f) { spriteName = "Harder_dif.png"; }
-        else if (percentage < 58.33f) { spriteName = "Insane_dif.png"; }
-        else if (percentage < 66.66f) { spriteName = "EasyDemon_dif.png"; }
-        else if (percentage < 75.0f) { spriteName = "MediumDemon_dif.png"; }
-        else if (percentage < 83.33f) { spriteName = "HardDemon_dif.png"; }
-        else if (percentage < 91.66f) { spriteName = "InsaneDemon_dif.png"; }
-        else { spriteName = "ExtremeDemon_dif.png"; }
+        // Lógica adaptada usando nombres de archivos nativos de Geometry Dash (11 estados)
+        if (percentage < 9.0f) { spriteName = "status_01_001.png"; } // Cara feliz (N/A)
+        else if (percentage < 18.0f) { spriteName = "difficulty_01_001.png"; } // Easy
+        else if (percentage < 27.0f) { spriteName = "difficulty_02_001.png"; } // Normal
+        else if (percentage < 36.0f) { spriteName = "difficulty_03_001.png"; } // Hard
+        else if (percentage < 45.0f) { spriteName = "difficulty_04_001.png"; } // Harder
+        else if (percentage < 54.0f) { spriteName = "difficulty_05_001.png"; } // Insane
+        else if (percentage < 63.0f) { spriteName = "difficulty_07_001.png"; } // Easy Demon
+        else if (percentage < 72.0f) { spriteName = "difficulty_08_001.png"; } // Medium Demon
+        else if (percentage < 81.0f) { spriteName = "difficulty_09_001.png"; } // Hard Demon
+        else if (percentage < 90.0f) { spriteName = "difficulty_10_001.png"; } // Insane Demon
+        else { spriteName = "difficulty_06_001.png"; } // Extreme Demon
 
         auto spriteFrame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(spriteName.c_str());
         if (spriteFrame) {
