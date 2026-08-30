@@ -4,25 +4,29 @@
 using namespace geode::prelude;
 
 class $modify(MyPlayLayer, PlayLayer) {
-    // Variable para guardar el puntero del sprite personalizado del medidor
-    CCSprite* m_customDifficultyMeter = nullptr;
+    // Estructura obligatoria en Geode para añadir variables a un hook
+    struct Fields {
+        CCSprite* m_customDifficultyMeter = nullptr;
+    };
 
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // Crear el sprite inicialmente con la textura por defecto de "NA"
-        m_customDifficultyMeter = CCSprite::createWithSpriteFrameName("NA_dif.png");
+        // Crear el sprite usando el caché de Geode
+        m_fields->m_customDifficultyMeter = CCSprite::createWithSpriteFrameName("NA_dif.png");
         
-        if (m_customDifficultyMeter) {
-            // Posicionar el medidor en la pantalla (Ejemplo: Esquina superior izquierda)
+        if (m_fields->m_customDifficultyMeter) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
-            m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 30.0f });
-            m_customDifficultyMeter->setScale(0.8f);
-            m_customDifficultyMeter->setID("custom-difficulty-meter"_spr);
+            
+            // Posicionar en la parte superior central
+            m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 30.0f });
+            
+            // Forzar a que mantenga exactamente el tamaño de escala correcto (Ej: 0.5f o 1.0f según tu preferencia visual)
+            m_fields->m_customDifficultyMeter->setScale(0.5f);
+            m_fields->m_customDifficultyMeter->setID("custom-difficulty-meter"_spr);
 
-            // Añadir el sprite a la capa de la interfaz de usuario (m_uiLayer)
             if (m_uiLayer) {
-                m_uiLayer->addChild(m_customDifficultyMeter);
+                m_uiLayer->addChild(m_fields->m_customDifficultyMeter);
             }
         }
 
@@ -32,17 +36,14 @@ class $modify(MyPlayLayer, PlayLayer) {
     void update(float dt) {
         PlayLayer::update(dt);
 
-        // Si el sprite no se inicializó correctamente o no hay longitud, no hacer nada
-        if (!m_customDifficultyMeter || m_levelLength <= 0.0f) return;
+        if (!m_fields->m_customDifficultyMeter || m_levelLength <= 0.0f) return;
 
-        // Calcular el porcentaje real del nivel basado en el jugador principal
         float percentage = (m_player1->m_position.x / m_levelLength) * 100.0f;
         if (percentage > 100.0f) percentage = 100.0f;
         if (percentage < 0.0f) percentage = 0.0f;
 
         std::string spriteName = "Normal_dif.png";
 
-        // Lógica de porcentajes en una sola línea por condicional
         if (percentage < 8.33f) { spriteName = "NA_dif.png"; }
         else if (percentage < 16.66f) { spriteName = "Auto_dif.png"; }
         else if (percentage < 25.0f) { spriteName = "Easy_dif.png"; }
@@ -56,10 +57,9 @@ class $modify(MyPlayLayer, PlayLayer) {
         else if (percentage < 91.66f) { spriteName = "InsaneDemon_dif.png"; }
         else { spriteName = "ExtremeDemon_dif.png"; }
 
-        // Actualizar dinámicamente la textura del medidor en tiempo de ejecución
         auto spriteFrame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(spriteName.c_str());
         if (spriteFrame) {
-            m_customDifficultyMeter->setDisplayFrame(spriteFrame);
+            m_fields->m_customDifficultyMeter->setDisplayFrame(spriteFrame);
         }
     }
 };
