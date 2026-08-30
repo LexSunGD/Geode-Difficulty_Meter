@@ -4,72 +4,77 @@
 using namespace geode::prelude;
 
 class $modify(MyPlayLayer, PlayLayer) {
-    struct Fields {
-        CCSprite* m_difficultySprite = nullptr;
-        std::string m_lastSpriteName = "";
-    };
+    // Declaramos un puntero para rastrear nuestro sprite personalizado
+    CCSprite* m_customDifficultyMeter = nullptr;
 
     bool init(GJGameLevel* level, bool useReplay, bool dontRunActions) {
-        if (!PlayLayer::init(level, useReplay, dontRunActions)) return false;
+        if (!PlayLayer::init(level, useReplay, dontRunActions)) {
+            return false;
+        }
 
-        std::string spriteName = "NA_dif.png";
+        // Creamos el sprite inicial (por ejemplo, Normal_dif.png)
+        auto fullSpriteName = Mod::get()->expandSpriteName("Normal_dif.png");
+        m_fields->m_customDifficultyMeter = CCSprite::createWithSpriteFrameName(fullSpriteName);
 
-        // Obtenemos la ruta física donde Geode extrae el mod
-        auto path = Mod::get()->getResourcesDir() / spriteName;
+        if (m_fields->m_customDifficultyMeter) {
+            // Ajustamos el tamaño basándonos en la escala del juego (360px a escala UHD / HD se adapta automáticamente)
+            // Forzamos un tamaño lógico inicial de 90x90 para que se vea idéntico en calidad alta
+            m_fields->m_customDifficultyMeter->setScale(90.0f / m_fields->m_customDifficultyMeter->getContentSize().width);
 
-        // Creamos el sprite manteniendo su escala real (1.0f)
-        m_fields->m_difficultySprite = CCSprite::create(path.string().c_str());
+            // Posicionamos el medidor en pantalla (ejemplo: Esquina superior izquierda)
+            auto winSize = CCDirector::get()->getWinSize();
+            m_fields->m_customDifficultyMeter->setPosition({ 60.f, winSize.height - 60.f });
+            m_fields->m_customDifficultyMeter->setID("difficulty-meter-sprite"_spr);
 
-        if (m_fields->m_difficultySprite) {
-            auto winSize = CCDirector::sharedDirector()->getWinSize();
-            
-            // Colocamos el sprite centrado arriba (Escala 1.0f para respetar tus píxeles HD)
-            m_fields->m_difficultySprite->setPosition({ winSize.width / 2, winSize.height - 35 });
-            m_fields->m_difficultySprite->setScale(1.0f); 
-
-            this->addChild(m_fields->m_difficultySprite, 100);
-            m_fields->m_lastSpriteName = spriteName;
+            // Lo añadimos a la interfaz (UI) del juego
+            this->addChild(m_fields->m_customDifficultyMeter, 999);
         }
 
         return true;
     }
 
-    void updateProgressbar() {
-        PlayLayer::updateProgressbar();
+    // El método update se ejecuta en cada frame del juego
+    void update(float dt) {
+        PlayLayer::update(dt);
 
-        if (!m_fields->m_difficultySprite) return;
+        if (!m_fields->m_customDifficultyMeter) return;
 
-        float percent = this->getCurrentPercent();
-        std::string spriteName = "NA_dif.png";
-
-        if (percent < 10.0f) { spriteName = "Auto_dif.png"; }
-        else if (percent >= 10.0f && percent < 20.0f) { spriteName = "Easy_dif.png"; }
-        else if (percent >= 20.0f && percent < 30.0f) { spriteName = "Normal_dif.png"; }
-        else if (percent >= 30.0f && percent < 40.0f) { spriteName = "Hard_dif.png"; }
-        else if (percent >= 40.0f && percent < 50.0f) { spriteName = "Harder_dif.png"; }
-        else if (percent >= 50.0f && percent < 60.0f) { spriteName = "Insane_dif.png"; }
-        else if (percent >= 60.0f && percent < 70.0f) { spriteName = "EasyDemon_dif.png"; }
-        else if (percent >= 70.0f && percent < 80.0f) { spriteName = "MediumDemon_dif.png"; }
-        else if (percent >= 80.0f && percent < 90.0f) { spriteName = "HardDemon_dif.png"; }
-        else if (percent >= 90.0f && percent < 95.0f) { spriteName = "InsaneDemon_dif.png"; }
-        else { spriteName = "ExtremeDemon_dif.png"; }
-
-        if (m_fields->m_lastSpriteName == spriteName) return;
-
-        auto path = Mod::get()->getResourcesDir() / spriteName;
+        // 1. Calcular el porcentaje actual del nivel de forma precisa
+        float positionX = m_player1->getPositionX();
+        float levelLength = m_levelLength;
         
-        // Cargamos la textura de forma directa (añadiendo el parámetro false requerido en Android/Windows)
-        auto texture = CCTextureCache::sharedTextureCache()->addImage(path.string().c_str(), false);
+        float percentage = 0.0f;
+        if (levelLength > 0.0f) {
+            percentage = (positionX / levelLength) * 100.0f;
+        }
+
+        // Aseguramos que el porcentaje se mantenga entre 0 y 100
+        if (percentage < 0.0f) percentage = 0.0f;
+        if (percentage > 100.0f) percentage = 100.0f;
+
+        // 2. Determinar qué sprite usar según el porcentaje actual
+        std::string spriteName = "Easy_dif.png"; // 0% - 20%
+
+        if (percentage > 20.0f && percentage <= 40.0f) {
+            spriteName = "Normal_dif.png";
+        } else if (percentage > 40.0f && percentage <= 60.0f) {
+            spriteName = "Hard_dif.png";
+        } else if (percentage > 60.0f && percentage <= 80.0f) {
+            spriteName = "Harder_dif.png";
+        } else if (percentage > 80.0f && percentage < 100.0f) {
+            spriteName = "Insane_dif.png";
+        } else if (percentage >= 100.0f) {
+            spriteName = "EasyDemon_dif.png"; // ¡Nivel completado!
+        }
+
+        // 3. Actualizar la textura del sprite dinámicamente sin recrear el objeto
+        auto fullSpriteName = Mod::get()->expandSpriteName(spriteName.c_str());
+        auto spriteFrame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(fullSpriteName);
         
-        if (texture) {
-            m_fields->m_difficultySprite->setTexture(texture);
-            
-            // Reajustamos el rectángulo del sprite para que se adapte al tamaño exacto de la nueva imagen
-            CCRect rect = CCRectZero;
-            rect.size = texture->getContentSize();
-            m_fields->m_difficultySprite->setTextureRect(rect);
-            
-            m_fields->m_lastSpriteName = spriteName;
+        if (spriteFrame) {
+            m_fields->m_customDifficultyMeter->setDisplayFrame(spriteFrame);
+            // Re-ajustamos la escala por si acaso las imágenes tienen ligeras diferencias de pixeles
+            m_fields->m_customDifficultyMeter->setScale(90.0f / m_fields->m_customDifficultyMeter->getContentSize().width);
         }
     }
 };
