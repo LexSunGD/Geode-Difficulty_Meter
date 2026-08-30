@@ -17,7 +17,7 @@ class $modify(MyPlayLayer, PlayLayer) {
         if (m_fields->m_customDifficultyLabel) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Ubicar en la parte superior central
+            // Ubicar en la parte superior central de la interfaz
             m_fields->m_customDifficultyLabel->setPosition({ winSize.width / 2, winSize.height - 40.0f });
             m_fields->m_customDifficultyLabel->setScale(0.6f);
             m_fields->m_customDifficultyLabel->setID("custom-difficulty-label"_spr);
@@ -31,20 +31,23 @@ class $modify(MyPlayLayer, PlayLayer) {
     }
     
     void update(float dt) {
-        PlayLayer::update(dt); // Mantiene el comportamiento nativo
+        PlayLayer::update(dt); // Mantiene las funciones nativas corriendo
 
-        if (!m_fields->m_customDifficultyLabel) return;
+        if (!m_fields->m_customDifficultyLabel || !m_player1) return;
 
         float percentage = 0.0f;
+        float endX = this->getEndPosition().x;
 
-        // Extraemos el porcentaje exacto directamente del objeto visual de la barra de progreso
-        if (m_progressBar) {
-            percentage = m_progressBar->getPercentage();
+        // Calcular el porcentaje real usando el punto final exacto de la versión 2.2
+        if (endX > 0.0f) {
+            percentage = (m_player1->m_position.x / endX) * 100.0f;
+            if (percentage > 100.0f) percentage = 100.0f;
+            if (percentage < 0.0f) percentage = 0.0f;
         }
 
         std::string diffText = "Normal";
 
-        // Lógica limpia en una sola línea por cada condicional
+        // Lógica limpia en una sola línea por cada condicional { }
         if (percentage < 8.33f) { diffText = "N/A"; }
         else if (percentage < 16.66f) { diffText = "Auto"; }
         else if (percentage < 25.0f) { diffText = "Easy"; }
