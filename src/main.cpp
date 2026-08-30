@@ -11,13 +11,13 @@ class $modify(MyPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // Crear una etiqueta de texto usando la fuente nativa del juego
+        // Crear etiqueta de texto con la tipografía oficial del juego
         m_fields->m_customDifficultyLabel = CCLabelBMFont::create("Cargando...", "bigFont.fnt");
         
         if (m_fields->m_customDifficultyLabel) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Posicionar en la parte superior central de la pantalla
+            // Posicionar arriba en el centro
             m_fields->m_customDifficultyLabel->setPosition({ winSize.width / 2, winSize.height - 40.0f });
             m_fields->m_customDifficultyLabel->setScale(0.6f);
             m_fields->m_customDifficultyLabel->setID("custom-difficulty-label"_spr);
@@ -33,15 +33,14 @@ class $modify(MyPlayLayer, PlayLayer) {
     void update(float dt) {
         PlayLayer::update(dt);
 
-        if (!m_fields->m_customDifficultyLabel || m_levelLength <= 0.0f) return;
+        if (!m_fields->m_customDifficultyLabel) return;
 
-        float percentage = (m_player1->m_position.x / m_levelLength) * 100.0f;
-        if (percentage > 100.0f) percentage = 100.0f;
-        if (percentage < 0.0f) percentage = 0.0f;
+        // Usamos el método oficial de Geometry Dash para obtener el porcentaje preciso
+        float percentage = this->getCurrentPercent();
 
         std::string diffText = "Normal";
 
-        // Lógica de porcentajes asignando texto directo
+        // Lógica de porcentajes limpia en una sola línea por cada condicional
         if (percentage < 8.33f) { diffText = "N/A"; }
         else if (percentage < 16.66f) { diffText = "Auto"; }
         else if (percentage < 25.0f) { diffText = "Easy"; }
@@ -55,7 +54,7 @@ class $modify(MyPlayLayer, PlayLayer) {
         else if (percentage < 91.66f) { diffText = "Insane Demon"; }
         else { diffText = "Extreme Demon"; }
 
-        // Actualizar el texto en pantalla
+        // Refrescar el texto en pantalla en cada frame de ejecución
         m_fields->m_customDifficultyLabel->setString(diffText.c_str());
     }
 };
