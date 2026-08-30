@@ -11,7 +11,7 @@ class $modify(MyPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // Crear la etiqueta de texto inicialmente con "N/A"
+        // Crear la etiqueta de texto con "N/A" por defecto
         m_fields->m_customDifficultyLabel = CCLabelBMFont::create("N/A", "bigFont.fnt");
         
         if (m_fields->m_customDifficultyLabel) {
@@ -31,17 +31,20 @@ class $modify(MyPlayLayer, PlayLayer) {
     }
     
     void update(float dt) {
-        PlayLayer::update(dt); // Llama a la actualización original del juego
+        PlayLayer::update(dt); // Mantiene el comportamiento nativo
 
-        // Si el texto no está listo, no hacemos nada en este frame
         if (!m_fields->m_customDifficultyLabel) return;
 
-        // Obtenemos el porcentaje directo y seguro del juego (evita congelarse al cargar)
-        float percentage = this->getCurrentPercent();
+        float percentage = 0.0f;
+
+        // Extraemos el porcentaje exacto directamente del objeto visual de la barra de progreso
+        if (m_progressBar) {
+            percentage = m_progressBar->getPercentage();
+        }
 
         std::string diffText = "Normal";
 
-        // Lógica ordenada en una sola línea por cada condicional { }
+        // Lógica limpia en una sola línea por cada condicional
         if (percentage < 8.33f) { diffText = "N/A"; }
         else if (percentage < 16.66f) { diffText = "Auto"; }
         else if (percentage < 25.0f) { diffText = "Easy"; }
@@ -55,7 +58,6 @@ class $modify(MyPlayLayer, PlayLayer) {
         else if (percentage < 91.66f) { diffText = "Insane Demon"; }
         else { diffText = "Extreme Demon"; }
 
-        // Actualizar el valor del texto en tiempo real
         m_fields->m_customDifficultyLabel->setString(diffText.c_str());
     }
 };
