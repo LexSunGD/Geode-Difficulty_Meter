@@ -12,21 +12,18 @@ class $modify(MyPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontRunActions) {
         if (!PlayLayer::init(level, useReplay, dontRunActions)) return false;
 
-        // Nombre del archivo inicial en tu carpeta de recursos
         std::string spriteName = "NA_dif.png";
 
-        // Usamos CCFileUtils para que Cocos encuentre el archivo físico en Android de forma nativa
-        auto fileUtils = CCFileUtils::sharedFileUtils();
-        std::string fullPath = fileUtils->fullPathForFilename(spriteName.c_str(), false);
+        // Obtenemos la ruta física donde Geode extrae el mod
+        auto path = Mod::get()->getResourcesDir() / spriteName;
 
-        // Creamos el sprite con su tamaño nativo de origen
-        m_fields->m_difficultySprite = CCSprite::create(fullPath.c_str());
+        // Creamos el sprite manteniendo su escala real (1.0f)
+        m_fields->m_difficultySprite = CCSprite::create(path.string().c_str());
 
         if (m_fields->m_difficultySprite) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Posicionamiento centrado debajo de la barra.
-            // Nota: Mantenemos la escala 1.0f para respetar el tamaño exacto de tu imagen HD
+            // Colocamos el sprite centrado arriba (Escala 1.0f para respetar tus píxeles HD)
             m_fields->m_difficultySprite->setPosition({ winSize.width / 2, winSize.height - 35 });
             m_fields->m_difficultySprite->setScale(1.0f); 
 
@@ -45,7 +42,6 @@ class $modify(MyPlayLayer, PlayLayer) {
         float percent = this->getCurrentPercent();
         std::string spriteName = "NA_dif.png";
 
-        // Asignación de texturas según el porcentaje
         if (percent < 10.0f) { spriteName = "Auto_dif.png"; }
         else if (percent >= 10.0f && percent < 20.0f) { spriteName = "Easy_dif.png"; }
         else if (percent >= 20.0f && percent < 30.0f) { spriteName = "Normal_dif.png"; }
@@ -60,17 +56,15 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         if (m_fields->m_lastSpriteName == spriteName) return;
 
-        // Buscamos la ruta completa del nuevo archivo mediante el buscador de Cocos2d-x
-        auto fileUtils = CCFileUtils::sharedFileUtils();
-        std::string fullPath = fileUtils->fullPathForFilename(spriteName.c_str(), false);
-
-        // Cargamos la textura asegurando la compatibilidad multiplataforma de argumentos en GD 2.2
-        auto texture = CCTextureCache::sharedTextureCache()->addImage(fullPath.c_str(), false);
+        auto path = Mod::get()->getResourcesDir() / spriteName;
+        
+        // Cargamos la textura de forma directa (añadiendo el parámetro false requerido en Android/Windows)
+        auto texture = CCTextureCache::sharedTextureCache()->addImage(path.string().c_str(), false);
         
         if (texture) {
             m_fields->m_difficultySprite->setTexture(texture);
             
-            // Reajustamos las dimensiones al tamaño real y nativo del nuevo archivo PNG
+            // Reajustamos el rectángulo del sprite para que se adapte al tamaño exacto de la nueva imagen
             CCRect rect = CCRectZero;
             rect.size = texture->getContentSize();
             m_fields->m_difficultySprite->setTextureRect(rect);
