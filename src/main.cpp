@@ -1,66 +1,114 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PlayLayer.hpp>
+#include <string>
+#include <vector>
+#include <map>
 
 using namespace geode::prelude;
 
-class $modify(MyPlayLayer, PlayLayer) {
+struct DifficultyRange {
+    std::string spriteName;
+    float minPercent;
+    float maxPercent;
+};
+
+class $modify(MyDifficultyMeterLayer, PlayLayer) {
     struct Fields {
-        CCLabelBMFont* m_customDifficultyLabel = nullptr;
+        CCSprite* m_meterSprite = nullptr;
+        std::vector<DifficultyRange> m_allRanges;
+        std::string m_lastLoadedSprite = "";
     };
 
-    bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
-        if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
+    bool init(GJGameLevel* level, bool useReplay, bool dontRunLevel) {
+        if (!PlayLayer::init(level, useReplay, dontRunLevel)) return false;
 
-        // Crear la etiqueta de texto con "N/A" por defecto
-        m_fields->m_customDifficultyLabel = CCLabelBMFont::create("N/A", "bigFont.fnt");
+        m_fields->m_allRanges.clear();
+        m_fields->m_lastLoadedSprite = "";
+
+        // =========================================================================
+        // 🛠️ CONFIGURA TU PROGRAMACIÓN PARA TU VIDEO AQUÍ DIRECTAMENTE:
+        // Formato: { "Nombre_de_la_imagen.png", Porcentaje_Inicio, Porcentaje_Fin }
+        // Puedes repetir dificultades en cualquier orden y dejar tramos vacíos.
+        // =========================================================================
+        m_fields->m_allRanges.push_back({ "Easy_dif.png", 0.0f, 10.5f });
+        m_fields->m_allRanges.push_back({ "Normal_dif.png", 11.0f, 23.0f });
+        m_fields->m_allRanges.push_back({ "InsaneDemon_dif.png", 24.0f, 50.0f });
+        m_fields->m_allRanges.push_back({ "Easy_dif.png", 51.0f, 76.0f });       // Se repite Easy
+        m_fields->m_allRanges.push_back({ "Harder_dif.png", 77.0f, 91.0f });
+        m_fields->m_allRanges.push_back({ "Auto_dif.png", 92.0f, 100.0f });
+        // =========================================================================
+
+        // Crear el contenedor gráfico obligatorio en la memoria de Cocos2d-x
+        std::string initialSprite = Mod::get()->getID() + "/NA_dif.png";
+        m_fields->m_meterSprite = CCSprite::create(initialSprite.c_str());
         
-        if (m_fields->m_customDifficultyLabel) {
+        if (m_fields->m_meterSprite) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
+            // Posicionar arriba a la derecha de forma limpia para tu medidor
+            m_fields->m_meterSprite->setPosition({ winSize.width - 60, winSize.height - 40 });
+            m_fields->m_meterSprite->setScale(1.0f);
             
-            // Ubicar en la parte superior central de la interfaz
-            m_fields->m_customDifficultyLabel->setPosition({ winSize.width / 2, winSize.height - 40.0f });
-            m_fields->m_customDifficultyLabel->setScale(0.6f);
-            m_fields->m_customDifficultyLabel->setID("custom-difficulty-label"_spr);
+            // Inicia oculto. El ciclo update lo encenderá inmediatamente si el 0% tiene una regla
+            m_fields->m_meterSprite->setVisible(false); 
+            
+            // Adjuntar a la interfaz del nivel (UI) para que no se mueva con la cámara del cubo
+            this->m_uiLayer->addChild(m_fields->m_meterSprite, 100);
+        }
 
-            if (m_uiLayer) {
-                m_uiLayer->addChild(m_fields->m_customDifficultyLabel);
+        this->scheduleUpdate();
+        return true;
+    }
+
+    void update(float dt) {
+        PlayLayer::update(dt);
+        if (!m_fields->m_meterSprite) return;
+
+        // LÓGICA DE BARRA DE PROGRESO: Extrae el porcentaje real de la barra superior del juego
+        float percentage = 0.0f;
+        if (this->m_sliderBar && this->m_sliderBar->isVisible()) {
+            // Evaluamos la escala horizontal de llenado de la barra física (va de 0.0 a 1.0)
+            percentage = this->m_sliderBar->getScaleX() * 100.0f;
+        } else {
+            // Fallback: Si juegas con la barra de progreso oculta en las opciones de GD
+            if (this->m_levelLength > 0.0f && this->m_player1) {
+                percentage = (this->m_player1->m_position.x / this->m_levelLength) * 100.0f;
+            }
+        }
+        percentage = std::clamp(percentage, 0.0f, 100.0f);
+
+        // Escanear si el porcentaje actual cae en alguna de tus reglas del C++
+        std::string targetSpriteName = "";
+        for (const auto& range : m_fields->m_allRanges) {
+            if (percentage >= range.minPercent && percentage <= range.maxPercent) {
+                targetSpriteName = range.spriteName;
+                break;
             }
         }
 
-        return true;
-    }
-    
-    void update(float dt) {
-        PlayLayer::update(dt); // Mantiene las funciones nativas corriendo
-
-        if (!m_fields->m_customDifficultyLabel || !m_player1) return;
-
-        float percentage = 0.0f;
-        float endX = this->getEndPosition().x;
-
-        // Calcular el porcentaje real usando el punto final exacto de la versión 2.2
-        if (endX > 0.0f) {
-            percentage = (m_player1->m_position.x / endX) * 100.0f;
-            if (percentage > 100.0f) percentage = 100.0f;
-            if (percentage < 0.0f) percentage = 0.0f;
+        // INVISIBILIDAD: Si el tramo actual está vacío o no lo pusiste en la lista, se oculta al instante
+        if (targetSpriteName.empty()) {
+            m_fields->m_meterSprite->setVisible(false);
+            m_fields->m_lastLoadedSprite = "";
+            return;
         }
 
-        std::string diffText = "Normal";
+        // Si hay una dificultad válida, encender visibilidad y refrescar la textura
+        m_fields->m_meterSprite->setVisible(true);
 
-        // Lógica limpia en una sola línea por cada condicional { }
-        if (percentage < 8.33f) { diffText = "N/A"; }
-        else if (percentage < 16.66f) { diffText = "Auto"; }
-        else if (percentage < 25.0f) { diffText = "Easy"; }
-        else if (percentage < 33.33f) { diffText = "Normal"; }
-        else if (percentage < 41.66f) { diffText = "Hard"; }
-        else if (percentage < 50.0f) { diffText = "Harder"; }
-        else if (percentage < 58.33f) { diffText = "Insane"; }
-        else if (percentage < 66.66f) { diffText = "Easy Demon"; }
-        else if (percentage < 75.0f) { diffText = "Medium Demon"; }
-        else if (percentage < 83.33f) { diffText = "Hard Demon"; }
-        else if (percentage < 91.66f) { diffText = "Insane Demon"; }
-        else { diffText = "Extreme Demon"; }
-
-        m_fields->m_customDifficultyLabel->setString(diffText.c_str());
+        if (m_fields->m_lastLoadedSprite != targetSpriteName) {
+            std::string finalPath = Mod::get()->getID() + "/" + targetSpriteName;
+            auto texture = CCTextureCache::sharedTextureCache()->addImage(finalPath.c_str(), false);
+            if (texture) {
+                m_fields->m_meterSprite->setTexture(texture);
+                
+                // Forzar reajuste de las dimensiones reales de la nueva cara píxel por píxel
+                CCRect rect = CCRectZero;
+                rect.size = texture->getContentSize();
+                m_fields->m_meterSprite->setTextureRect(rect);
+                
+                m_fields->m_meterSprite->setScale(1.0f);
+                m_fields->m_lastLoadedSprite = targetSpriteName;
+            }
+        }
     }
 };
