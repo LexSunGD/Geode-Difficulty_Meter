@@ -11,7 +11,10 @@ class $modify(MyPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // Usamos la sintaxis exacta del mod que revisaste
+        // Si el nivel es de tipo Platformer, no añadimos el medidor dinámico
+        if (level->isPlatformer()) return true;
+
+        // Carga perfecta con tu configuración del mod.json
         m_fields->m_customDifficultyMeter = CCSprite::create("NA_dif.png"_spr);
         
         if (m_fields->m_customDifficultyMeter) {
@@ -33,19 +36,30 @@ class $modify(MyPlayLayer, PlayLayer) {
     void update(float dt) {
         PlayLayer::update(dt); 
 
-        if (!m_fields->m_customDifficultyMeter || !m_player1) return;
+        // Si no hay medidor (como en niveles Platformer) o no está listo, salimos
+        if (!m_fields->m_customDifficultyMeter || !m_level) return;
 
+        // Extraemos el porcentaje exacto en tiempo real usando el método nativo descubierto
         float percentage = 0.0f;
-
-        if (m_levelLength > 0.0f) {
+        
+        // Calculamos el progreso combinando la posición actual sobre la longitud total cargada
+        if (m_levelLength > 0.0f && m_player1) {
             percentage = (m_player1->m_position.x / m_levelLength) * 100.0f;
-            if (percentage > 100.0f) percentage = 100.0f;
-            if (percentage < 0.0f) percentage = 0.0f;
         }
+
+        // Sistema de respaldo: Si el cálculo de posición da un número erróneo o se congela,
+        // usamos el actualizador nativo de porcentaje de la interfaz de Geode
+        if (percentage <= 0.0f) {
+            percentage = this->getCurrentPercent();
+        }
+
+        // Asegurar límites matemáticos del porcentaje (0% a 100%)
+        if (percentage > 100.0f) percentage = 100.0f;
+        if (percentage < 0.0f) percentage = 0.0f;
 
         std::string spriteName = "Normal_dif.png";
 
-        // Lógica limpia en una sola línea por cada condicional { }
+        // Tu lógica exacta en una sola línea por condicional { }
         if (percentage < 8.33f) { spriteName = "NA_dif.png"; }
         else if (percentage < 16.66f) { spriteName = "Auto_dif.png"; }
         else if (percentage < 25.0f) { spriteName = "Easy_dif.png"; }
@@ -59,7 +73,7 @@ class $modify(MyPlayLayer, PlayLayer) {
         else if (percentage < 91.66f) { spriteName = "InsaneDemon_dif.png"; }
         else { spriteName = "ExtremeDemon_dif.png"; }
 
-        // Buscamos el cuadro en el caché usando la ruta registrada por Geode
+        // Formateamos la ruta interna con el ID del mod para buscar en las texturas
         std::string frameName = Mod::get()->getID() + "/" + spriteName;
         auto spriteFrame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(frameName.c_str());
         
