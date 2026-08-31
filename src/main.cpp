@@ -3,22 +3,6 @@
 
 using namespace geode::prelude;
 
-// Lista de tus 12 imágenes personalizadas para cargarlas en memoria al iniciar el juego
-const std::vector<std::string> CUSTOM_SPRITES = {
-    "NA_dif.png", "Auto_dif.png", "Easy_dif.png", "Normal_dif.png",
-    "Hard_dif.png", "Harder_dif.png", "Insane_dif.png", "EasyDemon_dif.png",
-    "MediumDemon_dif.png", "HardDemon_dif.png", "InsaneDemon_dif.png", "ExtremeDemon_dif.png"
-};
-
-// Este bloque le indica a Geode que cargue físicamente las texturas apenas se active el mod
-$execute {
-    for (const auto& sprite : CUSTOM_SPRITES) {
-        CCSpriteFrameCache::sharedSpriteFrameCache()->addSpriteFrame(
-            CCSpriteFrame::create(sprite.c_str(), CCRectZero), sprite.c_str()
-        );
-    }
-}
-
 class $modify(MyPlayLayer, PlayLayer) {
     struct Fields {
         CCSprite* m_customDifficultyMeter = nullptr;
@@ -27,16 +11,19 @@ class $modify(MyPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // Crear el sprite usando tu imagen precargada
-        m_fields->m_customDifficultyMeter = CCSprite::createWithSpriteFrameName("NA_dif.png");
+        // Construimos el nombre inicial usando el ID del mod registrado en tu mod.json
+        std::string initialSprite = Mod::get()->getID() + "/NA_dif.png";
+
+        // Crear el sprite buscando directamente en el caché de texturas unificado
+        m_fields->m_customDifficultyMeter = CCSprite::createWithSpriteFrameName(initialSprite.c_str());
         
         if (m_fields->m_customDifficultyMeter) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Ubicar en la parte superior central de la interfaz
+            // Ubicar en la parte superior central de la pantalla
             m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 40.0f });
             
-            // Forzar la escala exactamente a 1.0f como solicitaste
+            // Escala fijada exactamente en 1.0f (360x360 píxeles nativos)
             m_fields->m_customDifficultyMeter->setScale(1.0f); 
             m_fields->m_customDifficultyMeter->setID("custom-difficulty-meter"_spr);
 
@@ -55,6 +42,7 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         float percentage = 0.0f;
 
+        // Cálculo del porcentaje utilizando m_levelLength (verificado en tus bindings)
         if (m_levelLength > 0.0f) {
             percentage = (m_player1->m_position.x / m_levelLength) * 100.0f;
             if (percentage > 100.0f) percentage = 100.0f;
@@ -63,7 +51,7 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         std::string spriteName = "Normal_dif.png";
 
-        // Lógica limpia en una sola línea por cada condicional
+        // Estructura en una sola línea exacta por cada bloque condicional { }
         if (percentage < 8.33f) { spriteName = "NA_dif.png"; }
         else if (percentage < 16.66f) { spriteName = "Auto_dif.png"; }
         else if (percentage < 25.0f) { spriteName = "Easy_dif.png"; }
@@ -77,7 +65,10 @@ class $modify(MyPlayLayer, PlayLayer) {
         else if (percentage < 91.66f) { spriteName = "InsaneDemon_dif.png"; }
         else { spriteName = "ExtremeDemon_dif.png"; }
 
-        auto spriteFrame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(spriteName.c_str());
+        // Formateamos el nombre final con el prefijo del ID de tu mod para que Cocos2d-x lo localice
+        std::string fullSpritePath = Mod::get()->getID() + "/" + spriteName;
+
+        auto spriteFrame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(fullSpritePath.c_str());
         if (spriteFrame) {
             m_fields->m_customDifficultyMeter->setDisplayFrame(spriteFrame);
         }
