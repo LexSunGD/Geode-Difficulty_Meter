@@ -11,16 +11,15 @@ class $modify(MyPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // Si el nivel es de tipo Platformer, no añadimos el medidor dinámico
         if (level->isPlatformer()) return true;
 
-        // Carga perfecta con tu configuración del mod.json
+        // Carga perfecta usando tu configuración corregida del mod.json
         m_fields->m_customDifficultyMeter = CCSprite::create("NA_dif.png"_spr);
         
         if (m_fields->m_customDifficultyMeter) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Posicionar arriba en el centro
+            // Posicionar arriba en el centro (como en tu captura de pantalla)
             m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 50.0f });
             m_fields->m_customDifficultyMeter->setScale(1.0f); 
             m_fields->m_customDifficultyMeter->setID("custom-difficulty-meter"_spr);
@@ -33,33 +32,22 @@ class $modify(MyPlayLayer, PlayLayer) {
         return true;
     }
     
-    void update(float dt) {
-        PlayLayer::update(dt); 
+    // Interceptamos la función exacta donde el juego actualiza la barra y el porcentaje visual
+    void updateProgressbar() {
+        PlayLayer::updateProgressbar(); // Llama a la lógica original del juego para que mueva la barra
 
-        // Si no hay medidor (como en niveles Platformer) o no está listo, salimos
-        if (!m_fields->m_customDifficultyMeter || !m_level) return;
+        if (!m_fields->m_customDifficultyMeter) return;
 
-        // Extraemos el porcentaje exacto en tiempo real usando el método nativo descubierto
-        float percentage = 0.0f;
-        
-        // Calculamos el progreso combinando la posición actual sobre la longitud total cargada
-        if (m_levelLength > 0.0f && m_player1) {
-            percentage = (m_player1->m_position.x / m_levelLength) * 100.0f;
-        }
+        // Le pedimos el porcentaje exacto y real a la función nativa validada del juego
+        float percentage = this->getCurrentPercent();
 
-        // Sistema de respaldo: Si el cálculo de posición da un número erróneo o se congela,
-        // usamos el actualizador nativo de porcentaje de la interfaz de Geode
-        if (percentage <= 0.0f) {
-            percentage = this->getCurrentPercent();
-        }
-
-        // Asegurar límites matemáticos del porcentaje (0% a 100%)
+        // Límites seguros de control matemático
         if (percentage > 100.0f) percentage = 100.0f;
         if (percentage < 0.0f) percentage = 0.0f;
 
         std::string spriteName = "Normal_dif.png";
 
-        // Tu lógica exacta en una sola línea por condicional { }
+        // Tu lógica exacta limpia en una sola línea por cada condicional { }
         if (percentage < 8.33f) { spriteName = "NA_dif.png"; }
         else if (percentage < 16.66f) { spriteName = "Auto_dif.png"; }
         else if (percentage < 25.0f) { spriteName = "Easy_dif.png"; }
@@ -73,7 +61,7 @@ class $modify(MyPlayLayer, PlayLayer) {
         else if (percentage < 91.66f) { spriteName = "InsaneDemon_dif.png"; }
         else { spriteName = "ExtremeDemon_dif.png"; }
 
-        // Formateamos la ruta interna con el ID del mod para buscar en las texturas
+        // Formatear ruta utilizando el ID del mod registrado por Geode
         std::string frameName = Mod::get()->getID() + "/" + spriteName;
         auto spriteFrame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(frameName.c_str());
         
