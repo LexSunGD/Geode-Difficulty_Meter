@@ -11,16 +11,16 @@ class $modify(MyPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // Crear el sprite usando tus imágenes del repositorio. Empezamos en NA_dif.png
+        // Inicializar el sprite con la imagen por defecto "NA_dif.png"
         m_fields->m_customDifficultyMeter = CCSprite::createWithSpriteFrameName("NA_dif.png");
         
         if (m_fields->m_customDifficultyMeter) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Posicionar en la parte superior central de la interfaz
+            // Ubicar en la parte superior central de la pantalla
             m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 40.0f });
             
-            // Escala sugerida para tus imágenes de 360x360. Ajusta a tu gusto.
+            // Escala para tus imágenes de 360x360 píxeles
             m_fields->m_customDifficultyMeter->setScale(0.15f); 
             m_fields->m_customDifficultyMeter->setID("custom-difficulty-meter"_spr);
 
@@ -33,20 +33,15 @@ class $modify(MyPlayLayer, PlayLayer) {
     }
     
     void update(float dt) {
-        PlayLayer::update(dt); // Mantiene las funciones del juego corriendo
+        PlayLayer::update(dt); // Mantiene las funciones nativas corriendo
 
         if (!m_fields->m_customDifficultyMeter || !m_player1) return;
 
         float percentage = 0.0f;
-        
-        // Obtener los puntos clave del nivel en la versión 2.2081
-        float startX = m_levelStartX; 
-        float endX = this->getEndPosition().x;
-        float totalDistance = endX - startX;
 
-        // Cálculo dinámico robusto del progreso del nivel
-        if (totalDistance > 0.0f) {
-            percentage = ((m_player1->m_position.x - startX) / totalDistance) * 100.0f;
+        // Calcular el porcentaje usando la variable oficial m_levelLength verificada por el compilador
+        if (m_levelLength > 0.0f) {
+            percentage = (m_player1->m_position.x / m_levelLength) * 100.0f;
             if (percentage > 100.0f) percentage = 100.0f;
             if (percentage < 0.0f) percentage = 0.0f;
         }
