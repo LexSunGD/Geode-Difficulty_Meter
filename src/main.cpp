@@ -13,15 +13,27 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         if (level->isPlatformer()) return true;
 
-        // Inicializa el sprite de forma estática usando el operador _spr que funciona en el init
         m_fields->m_customDifficultyMeter = CCSprite::create("NA_dif.png"_spr);
         
         if (m_fields->m_customDifficultyMeter) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Ubicar arriba en el centro
-            m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 50.0f });
-            m_fields->m_customDifficultyMeter->setScale(1.0f); 
+            // 1. Obtener posiciones (Offsets de configuración)
+            float offsetX = static_cast<float>(Mod::get()->getSettingValue<int64_t>("meter-pos-x"));
+            float offsetY = static_cast<float>(Mod::get()->getSettingValue<int64_t>("meter-pos-y"));
+            
+            // Si el offset es 0,0 se posicionará exactamente en el centro de la pantalla
+            m_fields->m_customDifficultyMeter->setPosition({ (winSize.width / 2) + offsetX, (winSize.height / 2) + offsetY });
+            
+            // 2. Obtener escala de configuración
+            float scale = static_cast<float>(Mod::get()->getSettingValue<double>("meter-scale"));
+            m_fields->m_customDifficultyMeter->setScale(scale); 
+
+            // 3. Obtener opacidad (Cocos2d-x requiere un rango de 0 a 255)
+            int64_t opacityPercent = Mod::get()->getSettingValue<int64_t>("meter-opacity");
+            GLubyte alphaValue = static_cast<GLubyte>((opacityPercent * 255) / 100);
+            m_fields->m_customDifficultyMeter->setOpacity(alphaValue);
+
             m_fields->m_customDifficultyMeter->setID("custom-difficulty-meter"_spr);
 
             if (m_uiLayer) {
@@ -44,7 +56,6 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         std::string spriteName = "Normal_dif.png";
 
-        // Lógica limpia en una sola línea por cada condicional { }
         if (percentage < 8.33f) { spriteName = "NA_dif.png"; }
         else if (percentage < 16.66f) { spriteName = "Auto_dif.png"; }
         else if (percentage < 25.0f) { spriteName = "Easy_dif.png"; }
@@ -59,20 +70,28 @@ class $modify(MyPlayLayer, PlayLayer) {
         else { spriteName = "ExtremeDemon_dif.png"; }
 
         auto textureCache = CCTextureCache::sharedTextureCache();
-        
-        // Construimos la ruta dinámica utilizando el identificador de tu mod
         std::string fullPath = Mod::get()->getID() + "/" + spriteName;
-        
-        // CORRECCIÓN: Añadimos 'false' como segundo argumento para resolver el fallo de compilación
         auto newTexture = textureCache->addImage(fullPath.c_str(), false);
         
         if (newTexture) {
             m_fields->m_customDifficultyMeter->setTexture(newTexture);
             
-            // Forzar a que el contenedor de la imagen mida exactamente lo que mide la textura cargada
             CCRect rect = CCRectZero;
             rect.size = newTexture->getContentSize();
             m_fields->m_customDifficultyMeter->setTextureRect(rect);
+            
+            // Actualizar transformaciones en tiempo real por si cambian en los ajustes
+            auto winSize = CCDirector::sharedDirector()->getWinSize();
+            float offsetX = static_cast<float>(Mod::get()->getSettingValue<int64_t>("meter-pos-x"));
+            float offsetY = static_cast<float>(Mod::get()->getSettingValue<int64_t>("meter-pos-y"));
+            m_fields->m_customDifficultyMeter->setPosition({ (winSize.width / 2) + offsetX, (winSize.height / 2) + offsetY });
+            
+            float scale = static_cast<float>(Mod::get()->getSettingValue<double>("meter-scale"));
+            m_fields->m_customDifficultyMeter->setScale(scale);
+
+            int64_t opacityPercent = Mod::get()->getSettingValue<int64_t>("meter-opacity");
+            GLubyte alphaValue = static_cast<GLubyte>((opacityPercent * 255) / 100);
+            m_fields->m_customDifficultyMeter->setOpacity(alphaValue);
         }
     }
 };
