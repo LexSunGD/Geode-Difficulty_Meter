@@ -13,17 +13,17 @@ struct DifficultyStep {
 // - Puedes repetir imágenes las veces que quieras en distintos porcentajes.
 // - Puedes añadir más de 12 o menos si lo necesitas.
 const std::vector<DifficultyStep> MY_DIFFICULTY_RECIPE = {
-    { 0.0f,   "NA_dif.png" },
-    { 8.33f,  "Auto_dif.png" },
-    { 16.66f, "Easy_dif.png" },
-    { 25.0f,  "Normal_dif.png" },
-    { 33.33f, "Hard_dif.png" },
-    { 41.66f, "Harder_dif.png" },
-    { 50.0f,  "Normal_dif.png" },      // 👈 Ejemplo: Repetimos Normal al 50%
-    { 58.33f, "Insane_dif.png" },
-    { 66.66f, "EasyDemon_dif.png" },
-    { 75.0f,  "MediumDemon_dif.png" },
-    { 83.33f, "HardDemon_dif.png" },
-    { 91.66f, "InsaneDemon_dif.png" },
-    { 95.0f,  "ExtremeDemon_dif.png" }
+    { 0.0f,   "Normal_dif.png" },
+    { 16.66f,  "Hard_dif.png" },
+    { 33.33f, "Normal_dif.png" },
+    { 47.50f,  "Insane_dif.png" },
+    { 49.0f, "Hard_dif.png" },
+    { 58.33f, "Easy_dif.png" },
+    { 66.66f,  "Auto_dif.png" },      // 👈 Ejemplo: Repetimos Normal al 50%
+    { 67.59f, "Normal_dif.png" },
+    { 72.0f, "Hard_dif.png" },
+    { 76.0f,  "EasyDemon_dif.png" },
+    { 77.9f, "Harder_dif.png" },
+    { 80.80f, "Easy_dif.png" },
+    { 83.0f,  "Hard_dif.png" }
 };
