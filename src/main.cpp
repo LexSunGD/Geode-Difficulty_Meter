@@ -13,13 +13,13 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         if (level->isPlatformer()) return true;
 
-        // Carga perfecta usando tu configuración corregida del mod.json
+        // Inicializa usando el método nativo de Geode para archivos sueltos
         m_fields->m_customDifficultyMeter = CCSprite::create("NA_dif.png"_spr);
         
         if (m_fields->m_customDifficultyMeter) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Posicionar arriba en el centro (como en tu captura de pantalla)
+            // Ubicar arriba en el centro
             m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 50.0f });
             m_fields->m_customDifficultyMeter->setScale(1.0f); 
             m_fields->m_customDifficultyMeter->setID("custom-difficulty-meter"_spr);
@@ -32,16 +32,13 @@ class $modify(MyPlayLayer, PlayLayer) {
         return true;
     }
     
-    // Interceptamos la función exacta donde el juego actualiza la barra y el porcentaje visual
     void updateProgressbar() {
-        PlayLayer::updateProgressbar(); // Llama a la lógica original del juego para que mueva la barra
+        PlayLayer::updateProgressbar(); 
 
         if (!m_fields->m_customDifficultyMeter) return;
 
-        // Le pedimos el porcentaje exacto y real a la función nativa validada del juego
         float percentage = this->getCurrentPercent();
 
-        // Límites seguros de control matemático
         if (percentage > 100.0f) percentage = 100.0f;
         if (percentage < 0.0f) percentage = 0.0f;
 
@@ -61,12 +58,20 @@ class $modify(MyPlayLayer, PlayLayer) {
         else if (percentage < 91.66f) { spriteName = "InsaneDemon_dif.png"; }
         else { spriteName = "ExtremeDemon_dif.png"; }
 
-        // Formatear ruta utilizando el ID del mod registrado por Geode
-        std::string frameName = Mod::get()->getID() + "/" + spriteName;
-        auto spriteFrame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(frameName.c_str());
+        // MÉTODO INFALIBLE: Buscamos el archivo físico del mod en lugar de usar el SpriteFrameCache
+        auto textureCache = CCTextureCache::sharedTextureCache();
         
-        if (spriteFrame) {
-            m_fields->m_customDifficultyMeter->setDisplayFrame(spriteFrame);
+        // Geode indexa los archivos sueltos en el sistema de archivos con el ID del mod como prefijo
+        std::string fullPath = Mod::get()->getID() + "/" + spriteName;
+        auto newTexture = textureCache->addImage(fullPath.c_str());
+        
+        if (newTexture) {
+            m_fields->m_customDifficultyMeter->setTexture(newTexture);
+            
+            // Reajustamos el rectángulo de la textura para que coincida exactamente con los 360x360 píxeles
+            CCRect rect = CCRectZero;
+            rect.size = newTexture->getContentSize();
+            m_fields->m_customDifficultyMeter->setTextureRect(rect);
         }
     }
 };
