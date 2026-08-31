@@ -11,19 +11,16 @@ class $modify(MyPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // Construimos el nombre inicial usando el ID del mod registrado en tu mod.json
-        std::string initialSprite = Mod::get()->getID() + "/NA_dif.png";
-
-        // Crear el sprite buscando directamente en el caché de texturas unificado
-        m_fields->m_customDifficultyMeter = CCSprite::createWithSpriteFrameName(initialSprite.c_str());
+        // Para archivos PNG sueltos se usa create() en lugar de createWithSpriteFrameName
+        m_fields->m_customDifficultyMeter = CCSprite::create("NA_dif.png");
         
         if (m_fields->m_customDifficultyMeter) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Ubicar en la parte superior central de la pantalla
-            m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 40.0f });
+            // Ubicar en la parte superior central de la interfaz
+            m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 50.0f });
             
-            // Escala fijada exactamente en 1.0f (360x360 píxeles nativos)
+            // Forzar la escala exactamente a 1.0f (360x360 píxeles reales)
             m_fields->m_customDifficultyMeter->setScale(1.0f); 
             m_fields->m_customDifficultyMeter->setID("custom-difficulty-meter"_spr);
 
@@ -42,7 +39,7 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         float percentage = 0.0f;
 
-        // Cálculo del porcentaje utilizando m_levelLength (verificado en tus bindings)
+        // Cálculo estable del progreso del nivel
         if (m_levelLength > 0.0f) {
             percentage = (m_player1->m_position.x / m_levelLength) * 100.0f;
             if (percentage > 100.0f) percentage = 100.0f;
@@ -51,7 +48,7 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         std::string spriteName = "Normal_dif.png";
 
-        // Estructura en una sola línea exacta por cada bloque condicional { }
+        // Lógica limpia en una sola línea por cada condicional asignando las variables { }
         if (percentage < 8.33f) { spriteName = "NA_dif.png"; }
         else if (percentage < 16.66f) { spriteName = "Auto_dif.png"; }
         else if (percentage < 25.0f) { spriteName = "Easy_dif.png"; }
@@ -65,12 +62,17 @@ class $modify(MyPlayLayer, PlayLayer) {
         else if (percentage < 91.66f) { spriteName = "InsaneDemon_dif.png"; }
         else { spriteName = "ExtremeDemon_dif.png"; }
 
-        // Formateamos el nombre final con el prefijo del ID de tu mod para que Cocos2d-x lo localice
-        std::string fullSpritePath = Mod::get()->getID() + "/" + spriteName;
-
-        auto spriteFrame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(fullSpritePath.c_str());
-        if (spriteFrame) {
-            m_fields->m_customDifficultyMeter->setDisplayFrame(spriteFrame);
+        // Creamos una nueva textura en runtime para refrescar el archivo PNG suelto
+        auto textureCache = CCTextureCache::sharedTextureCache();
+        auto newTexture = textureCache->addImage(spriteName.c_str());
+        
+        if (newTexture) {
+            m_fields->m_customDifficultyMeter->setTexture(newTexture);
+            
+            // Reajustamos las dimensiones del rectángulo interno para que no se estire ni se bugee
+            CCRect rect = CCRectZero;
+            rect.size = newTexture->getContentSize();
+            m_fields->m_customDifficultyMeter->setTextureRect(rect);
         }
     }
 };
