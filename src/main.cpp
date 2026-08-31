@@ -1,5 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PlayLayer.hpp>
+#include "DifficultyConfig.hpp" // 👈 Conexión directa a tu archivo de recetas
 
 using namespace geode::prelude;
 
@@ -18,19 +19,14 @@ class $modify(MyPlayLayer, PlayLayer) {
         if (m_fields->m_customDifficultyMeter) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // 1. Obtener posiciones (Offsets de configuración)
             float offsetX = static_cast<float>(Mod::get()->getSettingValue<int64_t>("meter-pos-x"));
             float offsetY = static_cast<float>(Mod::get()->getSettingValue<int64_t>("meter-pos-y"));
-            
-            // Si el offset es 0,0 se posicionará exactamente en el centro de la pantalla
             m_fields->m_customDifficultyMeter->setPosition({ (winSize.width / 2) + offsetX, (winSize.height / 2) + offsetY });
             
-            // 2. Obtener escala de configuración
             float scale = static_cast<float>(Mod::get()->getSettingValue<double>("meter-scale"));
             m_fields->m_customDifficultyMeter->setScale(scale); 
 
-            // 3. Obtener opacidad (Cocos2d-x requiere un rango de 0 a 255)
-            int64_t opacityPercent = Mod::get()->getSettingValue<int64_t>("meter-opacity");
+            int64_t opacityPercent = Mod::getSettingValue<int64_t>("meter-opacity");
             GLubyte alphaValue = static_cast<GLubyte>((opacityPercent * 255) / 100);
             m_fields->m_customDifficultyMeter->setOpacity(alphaValue);
 
@@ -54,20 +50,17 @@ class $modify(MyPlayLayer, PlayLayer) {
         if (percentage > 100.0f) percentage = 100.0f;
         if (percentage < 0.0f) percentage = 0.0f;
 
-        std::string spriteName = "Normal_dif.png";
+        // Imagen por defecto por si la receta está vacía
+        std::string spriteName = "NA_dif.png"; 
 
-        if (percentage < 8.33f) { spriteName = "NA_dif.png"; }
-        else if (percentage < 16.66f) { spriteName = "Auto_dif.png"; }
-        else if (percentage < 25.0f) { spriteName = "Easy_dif.png"; }
-        else if (percentage < 33.33f) { spriteName = "Normal_dif.png"; }
-        else if (percentage < 41.66f) { spriteName = "Hard_dif.png"; }
-        else if (percentage < 50.0f) { spriteName = "Harder_dif.png"; }
-        else if (percentage < 58.33f) { spriteName = "Insane_dif.png"; }
-        else if (percentage < 66.66f) { spriteName = "EasyDemon_dif.png"; }
-        else if (percentage < 75.0f) { spriteName = "MediumDemon_dif.png"; }
-        else if (percentage < 83.33f) { spriteName = "HardDemon_dif.png"; }
-        else if (percentage < 91.66f) { spriteName = "InsaneDemon_dif.png"; }
-        else { spriteName = "ExtremeDemon_dif.png"; }
+        // BUCLE AUTOMÁTICO: Recorre tu lista en DifficultyConfig.hpp de arriba a abajo
+        for (const auto& step : MY_DIFFICULTY_RECIPE) {
+            if (percentage >= step.percentage) {
+                spriteName = step.spriteName; // Guarda la última coincidencia válida según el progreso
+            } else {
+                break; // Como la lista va de menor a mayor, si el porcentaje es menor, salimos del bucle
+            }
+        }
 
         auto textureCache = CCTextureCache::sharedTextureCache();
         std::string fullPath = Mod::get()->getID() + "/" + spriteName;
@@ -80,7 +73,6 @@ class $modify(MyPlayLayer, PlayLayer) {
             rect.size = newTexture->getContentSize();
             m_fields->m_customDifficultyMeter->setTextureRect(rect);
             
-            // Actualizar transformaciones en tiempo real por si cambian en los ajustes
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             float offsetX = static_cast<float>(Mod::get()->getSettingValue<int64_t>("meter-pos-x"));
             float offsetY = static_cast<float>(Mod::get()->getSettingValue<int64_t>("meter-pos-y"));
