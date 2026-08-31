@@ -16,13 +16,13 @@ const std::vector<DifficultyStep> MY_DIFFICULTY_RECIPE = {
     { 0.0f,   "Normal_dif.png" },
     { 16.66f,  "Hard_dif.png" },
     { 33.33f, "Normal_dif.png" },
-    { 47.50f,  "Insane_dif.png" },
+    { 47.80f,  "Insane_dif.png" },
     { 49.0f, "Hard_dif.png" },
-    { 58.33f, "Easy_dif.png" },
-    { 66.50f,  "Auto_dif.png" },      // 👈 Ejemplo: Repetimos Normal al 50%
-    { 67.59f, "Normal_dif.png" },
+    { 58.35f, "Easy_dif.png" },
+    { 65.95f,  "Auto_dif.png" },      // 👈 Ejemplo: Repetimos Normal al 50%
+    { 67.30f, "Normal_dif.png" },
     { 72.0f, "Hard_dif.png" },
-    { 76.0f,  "EasyDemon_dif.png" },
+    { 75.90f,  "EasyDemon_dif.png" },
     { 77.5f, "Harder_dif.png" },
     { 80.80f, "Easy_dif.png" },
     { 83.0f,  "Hard_dif.png" }
