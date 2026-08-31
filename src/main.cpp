@@ -13,7 +13,7 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         if (level->isPlatformer()) return true;
 
-        // Inicializa usando el método nativo de Geode para archivos sueltos
+        // Inicializa el sprite de forma estática usando el operador _spr que funciona en el init
         m_fields->m_customDifficultyMeter = CCSprite::create("NA_dif.png"_spr);
         
         if (m_fields->m_customDifficultyMeter) {
@@ -44,7 +44,7 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         std::string spriteName = "Normal_dif.png";
 
-        // Tu lógica exacta limpia en una sola línea por cada condicional { }
+        // Lógica limpia en una sola línea por cada condicional { }
         if (percentage < 8.33f) { spriteName = "NA_dif.png"; }
         else if (percentage < 16.66f) { spriteName = "Auto_dif.png"; }
         else if (percentage < 25.0f) { spriteName = "Easy_dif.png"; }
@@ -58,17 +58,18 @@ class $modify(MyPlayLayer, PlayLayer) {
         else if (percentage < 91.66f) { spriteName = "InsaneDemon_dif.png"; }
         else { spriteName = "ExtremeDemon_dif.png"; }
 
-        // MÉTODO INFALIBLE: Buscamos el archivo físico del mod en lugar de usar el SpriteFrameCache
         auto textureCache = CCTextureCache::sharedTextureCache();
         
-        // Geode indexa los archivos sueltos en el sistema de archivos con el ID del mod como prefijo
+        // Construimos la ruta dinámica utilizando el identificador de tu mod
         std::string fullPath = Mod::get()->getID() + "/" + spriteName;
-        auto newTexture = textureCache->addImage(fullPath.c_str());
+        
+        // CORRECCIÓN: Añadimos 'false' como segundo argumento para resolver el fallo de compilación
+        auto newTexture = textureCache->addImage(fullPath.c_str(), false);
         
         if (newTexture) {
             m_fields->m_customDifficultyMeter->setTexture(newTexture);
             
-            // Reajustamos el rectángulo de la textura para que coincida exactamente con los 360x360 píxeles
+            // Forzar a que el contenedor de la imagen mida exactamente lo que mide la textura cargada
             CCRect rect = CCRectZero;
             rect.size = newTexture->getContentSize();
             m_fields->m_customDifficultyMeter->setTextureRect(rect);
