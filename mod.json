@@ -1,21 +1,21 @@
 {
-    "geode": "5.10.1",
-    "gd": {
-        "win": "2.2081",
-        "android": "2.2081",
-        "mac": "2.2081",
-        "ios": "2.2081"
-    },
-    "id": "lexsungd.difficulty_meter",
-    "version": "1.0.0",
-    "name": "Difficulty Meter",
-    "developer": "LexSunGD",
-    "description": "Cambia el medidor de dificultad dinámicamente según el porcentaje del nivel.",
-    "repository": "https://github.com",
-    "tags": ["interface", "utility"],
-    "resources": {
-        "sprites": [
-            "*_dif.png"
-        ]
-    }
+	"geode": "5.10.1",
+	"gd": {
+		"win": "2.2081",
+		"android": "2.2081",
+		"mac": "2.2081",
+		"ios": "2.2081"
+	},
+	"id": "lexsungd.difficulty_meter",
+	"version": "1.0.0",
+	"name": "Difficulty Meter",
+	"developer": "LexSunGD",
+	"description": "Esto es un mod que agrega un medidor de dificultad personalizado en el nivel.",
+	"repository": "githubcom",
+	"tags": ["interface", "utility"],
+	"resources": {
+		"sprites": [
+			"resources/*_dif.png"
+		]
+	}
 }
