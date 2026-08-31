@@ -11,16 +11,14 @@ class $modify(MyPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // Para archivos PNG sueltos usamos create() directo
-        m_fields->m_customDifficultyMeter = CCSprite::create("NA_dif.png");
+        // Usamos la sintaxis exacta del mod que revisaste
+        m_fields->m_customDifficultyMeter = CCSprite::create("NA_dif.png"_spr);
         
         if (m_fields->m_customDifficultyMeter) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Ubicar en la parte superior central de la interfaz
+            // Posicionar arriba en el centro
             m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 50.0f });
-            
-            // Forzar la escala exactamente a 1.0f
             m_fields->m_customDifficultyMeter->setScale(1.0f); 
             m_fields->m_customDifficultyMeter->setID("custom-difficulty-meter"_spr);
 
@@ -39,7 +37,6 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         float percentage = 0.0f;
 
-        // Cálculo del progreso del nivel
         if (m_levelLength > 0.0f) {
             percentage = (m_player1->m_position.x / m_levelLength) * 100.0f;
             if (percentage > 100.0f) percentage = 100.0f;
@@ -62,18 +59,12 @@ class $modify(MyPlayLayer, PlayLayer) {
         else if (percentage < 91.66f) { spriteName = "InsaneDemon_dif.png"; }
         else { spriteName = "ExtremeDemon_dif.png"; }
 
-        auto textureCache = CCTextureCache::sharedTextureCache();
+        // Buscamos el cuadro en el caché usando la ruta registrada por Geode
+        std::string frameName = Mod::get()->getID() + "/" + spriteName;
+        auto spriteFrame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(frameName.c_str());
         
-        // Agregamos 'false' como segundo parámetro para solucionar el error del compilador
-        auto newTexture = textureCache->addImage(spriteName.c_str(), false);
-        
-        if (newTexture) {
-            m_fields->m_customDifficultyMeter->setTexture(newTexture);
-            
-            // Ajustamos el tamaño del recuadro para que coincida perfectamente con la nueva imagen
-            CCRect rect = CCRectZero;
-            rect.size = newTexture->getContentSize();
-            m_fields->m_customDifficultyMeter->setTextureRect(rect);
+        if (spriteFrame) {
+            m_fields->m_customDifficultyMeter->setDisplayFrame(spriteFrame);
         }
     }
 };
