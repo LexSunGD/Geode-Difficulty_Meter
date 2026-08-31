@@ -3,6 +3,22 @@
 
 using namespace geode::prelude;
 
+// Lista de tus 12 imágenes personalizadas para cargarlas en memoria al iniciar el juego
+const std::vector<std::string> CUSTOM_SPRITES = {
+    "NA_dif.png", "Auto_dif.png", "Easy_dif.png", "Normal_dif.png",
+    "Hard_dif.png", "Harder_dif.png", "Insane_dif.png", "EasyDemon_dif.png",
+    "MediumDemon_dif.png", "HardDemon_dif.png", "InsaneDemon_dif.png", "ExtremeDemon_dif.png"
+};
+
+// Este bloque le indica a Geode que cargue físicamente las texturas apenas se active el mod
+$execute {
+    for (const auto& sprite : CUSTOM_SPRITES) {
+        CCSpriteFrameCache::sharedSpriteFrameCache()->addSpriteFrame(
+            CCSpriteFrame::create(sprite.c_str(), CCRectZero), sprite.c_str()
+        );
+    }
+}
+
 class $modify(MyPlayLayer, PlayLayer) {
     struct Fields {
         CCSprite* m_customDifficultyMeter = nullptr;
@@ -11,17 +27,17 @@ class $modify(MyPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        // Inicializar el sprite con la imagen por defecto "NA_dif.png"
+        // Crear el sprite usando tu imagen precargada
         m_fields->m_customDifficultyMeter = CCSprite::createWithSpriteFrameName("NA_dif.png");
         
         if (m_fields->m_customDifficultyMeter) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
             
-            // Ubicar en la parte superior central de la pantalla
+            // Ubicar en la parte superior central de la interfaz
             m_fields->m_customDifficultyMeter->setPosition({ winSize.width / 2, winSize.height - 40.0f });
             
-            // Escala para tus imágenes de 360x360 píxeles
-            m_fields->m_customDifficultyMeter->setScale(0.15f); 
+            // Forzar la escala exactamente a 1.0f como solicitaste
+            m_fields->m_customDifficultyMeter->setScale(1.0f); 
             m_fields->m_customDifficultyMeter->setID("custom-difficulty-meter"_spr);
 
             if (m_uiLayer) {
@@ -33,13 +49,12 @@ class $modify(MyPlayLayer, PlayLayer) {
     }
     
     void update(float dt) {
-        PlayLayer::update(dt); // Mantiene las funciones nativas corriendo
+        PlayLayer::update(dt); 
 
         if (!m_fields->m_customDifficultyMeter || !m_player1) return;
 
         float percentage = 0.0f;
 
-        // Calcular el porcentaje usando la variable oficial m_levelLength verificada por el compilador
         if (m_levelLength > 0.0f) {
             percentage = (m_player1->m_position.x / m_levelLength) * 100.0f;
             if (percentage > 100.0f) percentage = 100.0f;
@@ -48,7 +63,7 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         std::string spriteName = "Normal_dif.png";
 
-        // Lógica limpia en una sola línea por cada condicional asignando tus archivos PNG
+        // Lógica limpia en una sola línea por cada condicional
         if (percentage < 8.33f) { spriteName = "NA_dif.png"; }
         else if (percentage < 16.66f) { spriteName = "Auto_dif.png"; }
         else if (percentage < 25.0f) { spriteName = "Easy_dif.png"; }
@@ -62,7 +77,6 @@ class $modify(MyPlayLayer, PlayLayer) {
         else if (percentage < 91.66f) { spriteName = "InsaneDemon_dif.png"; }
         else { spriteName = "ExtremeDemon_dif.png"; }
 
-        // Actualizar la textura del sprite en tiempo real
         auto spriteFrame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(spriteName.c_str());
         if (spriteFrame) {
             m_fields->m_customDifficultyMeter->setDisplayFrame(spriteFrame);
