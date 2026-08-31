@@ -15,7 +15,7 @@
 	"tags": ["interface", "utility"],
 	"resources": {
 		"sprites": [
-			"resources/*_dif.png"
+			"resources/*.png"
 		]
 	}
 }
