@@ -1,6 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PlayLayer.hpp>
-#include "DifficultyConfig.hpp" // 👈 Conexión directa a tu archivo de recetas
+#include "DifficultyConfig.hpp"
 
 using namespace geode::prelude;
 
@@ -26,7 +26,8 @@ class $modify(MyPlayLayer, PlayLayer) {
             float scale = static_cast<float>(Mod::get()->getSettingValue<double>("meter-scale"));
             m_fields->m_customDifficultyMeter->setScale(scale); 
 
-            int64_t opacityPercent = Mod::getSettingValue<int64_t>("meter-opacity");
+            // CORRECCIÓN AQUÍ: Se añadió ->get() que faltaba y causaba el error de compilación
+            int64_t opacityPercent = Mod::get()->getSettingValue<int64_t>("meter-opacity");
             GLubyte alphaValue = static_cast<GLubyte>((opacityPercent * 255) / 100);
             m_fields->m_customDifficultyMeter->setOpacity(alphaValue);
 
@@ -50,15 +51,13 @@ class $modify(MyPlayLayer, PlayLayer) {
         if (percentage > 100.0f) percentage = 100.0f;
         if (percentage < 0.0f) percentage = 0.0f;
 
-        // Imagen por defecto por si la receta está vacía
         std::string spriteName = "NA_dif.png"; 
 
-        // BUCLE AUTOMÁTICO: Recorre tu lista en DifficultyConfig.hpp de arriba a abajo
         for (const auto& step : MY_DIFFICULTY_RECIPE) {
             if (percentage >= step.percentage) {
-                spriteName = step.spriteName; // Guarda la última coincidencia válida según el progreso
+                spriteName = step.spriteName; 
             } else {
-                break; // Como la lista va de menor a mayor, si el porcentaje es menor, salimos del bucle
+                break; 
             }
         }
 
