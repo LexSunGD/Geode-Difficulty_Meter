@@ -10,42 +10,48 @@
 	"version": "1.0.0",
 	"name": "Difficulty Meter",
 	"developer": "LexSunGD",
-	"description": "Esto es un mod que agrega un medidor de dificultad personalizado en el nivel.",
-	"repository": "githubcom",
-	"tags": ["interface", "utility"],
+	"description": "Agrega caras de dificultad segun el porcentaje del nivel.",
+	"repository": "https://github.com/LexSunGD/Geode-Difficulty_Meter",
+	"tags": ["interface", "utility", "offline"],
 	"resources": {
 		"sprites": [
 			"resources/*.png"
 		]
 	},
 	"settings": {
+		"disable-mod": {
+			"name": "Disable Mod",
+			"description": "Si esto esta activado el Medidor no se mostrará.",
+			"type": "bool",
+			"default": false
+		},
 		"meter-scale": {
-			"name": "Escala del Medidor",
-			"description": "Controla el tamaño. 1.0 es original, 2.0 el doble, 0.5 la mitad.",
+			"name": "Meter Scale",
+			"description": "Ajusta el tamaño de las caras de dificultad.",
 			"type": "float",
-			"default": 1.0,
+			"default": 1.2,
 			"min": 0.1,
 			"max": 5.0
 		},
 		"meter-pos-x": {
-			"name": "Posición X (Offset)",
-			"description": "Desplazamiento horizontal. 0 coloca el medidor en el centro.",
+			"name": "Position X (Offset)",
+			"description": "Posicion en el eye X (horizontal).",
 			"type": "int",
-			"default": 0,
+			"default": 270,
 			"min": -500,
 			"max": 500
 		},
 		"meter-pos-y": {
-			"name": "Posición Y (Offset)",
-			"description": "Desplazamiento vertical en base al centro de la pantalla. 0 es el centro.",
+			"name": "Position Y (Offset)",
+			"description": "Posicion en el eje Y (vertical).",
 			"type": "int",
-			"default": 130,
+			"default": -70,
 			"min": -300,
 			"max": 300
 		},
 		"meter-opacity": {
-			"name": "Opacidad",
-			"description": "Porcentaje de visibilidad del medidor.",
+			"name": "Opacity",
+			"description": "Opacidad de las caras de dificultad.",
 			"type": "int",
 			"default": 100,
 			"min": 0,
