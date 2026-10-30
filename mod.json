@@ -1,16 +1,16 @@
 {
-	"geode": "5.10.1",
+	"geode": "5.11.2",
 	"gd": {
-		"win": "2.2081",
-		"android": "2.2081",
-		"mac": "2.2081",
-		"ios": "2.2081"
+		"win": "2.2091",
+		"android": "2.2091",
+		"mac": "2.2091",
+		"ios": "2.2091"
 	},
 	"id": "lexsungd.difficulty_meter",
 	"version": "1.0.0",
 	"name": "Difficulty Meter",
 	"developer": "LexSunGD",
-	"description": "Agrega caras de dificultad segun el porcentaje del nivel.",
+	"description": "Add difficulty faces based on the percentage of the level.",
 	"repository": "https://github.com/LexSunGD/Geode-Difficulty_Meter",
 	"tags": ["interface", "utility", "offline"],
 	"resources": {
@@ -21,13 +21,13 @@
 	"settings": {
 		"disable-mod": {
 			"name": "Disable Mod",
-			"description": "Si esto esta activado el Medidor no se mostrará.",
+			"description": "If this is enabled, the Meter will not be displayed.",
 			"type": "bool",
 			"default": false
 		},
 		"meter-scale": {
 			"name": "Meter Scale",
-			"description": "Ajusta el tamaño de las caras de dificultad.",
+			"description": "Adjust the size of the difficulty faces.",
 			"type": "float",
 			"default": 1.2,
 			"min": 0.1,
@@ -35,7 +35,7 @@
 		},
 		"meter-pos-x": {
 			"name": "Position X (Offset)",
-			"description": "Posicion en el eye X (horizontal).",
+			"description": "Position on the X-axis (horizontal).",
 			"type": "int",
 			"default": 270,
 			"min": -500,
@@ -43,7 +43,7 @@
 		},
 		"meter-pos-y": {
 			"name": "Position Y (Offset)",
-			"description": "Posicion en el eje Y (vertical).",
+			"description": "Position on the Y-axis (vertical).",
 			"type": "int",
 			"default": -70,
 			"min": -300,
@@ -51,7 +51,7 @@
 		},
 		"meter-opacity": {
 			"name": "Opacity",
-			"description": "Opacidad de las caras de dificultad.",
+			"description": "Opacity of difficulty faces.",
 			"type": "int",
 			"default": 100,
 			"min": 0,
