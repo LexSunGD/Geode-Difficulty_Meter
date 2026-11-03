@@ -45,7 +45,7 @@
 			"name": "Position Y (Offset)",
 			"description": "Position of the y-axis (vertical).",
 			"type": "int",
-			"default": -70,
+			"default": -90,
 			"min": -300,
 			"max": 300
 		},
