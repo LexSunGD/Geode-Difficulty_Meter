@@ -35,7 +35,7 @@
 		},
 		"meter-pos-x": {
 			"name": "Position X (Offset)",
-			"description": "Position on the X-axis (horizontal).",
+			"description": "Position of the X-axis (horizontal).",
 			"type": "int",
 			"default": 270,
 			"min": -500,
@@ -43,7 +43,7 @@
 		},
 		"meter-pos-y": {
 			"name": "Position Y (Offset)",
-			"description": "Position on the Y-axis (vertical).",
+			"description": "Position of the y-axis (vertical).",
 			"type": "int",
 			"default": -70,
 			"min": -300,
