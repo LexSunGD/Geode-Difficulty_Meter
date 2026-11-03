@@ -27,18 +27,18 @@ class $modify(MyPlayLayer, PlayLayer) {
         if (!std::filesystem::exists(jsonPath.string())) {
             std::string defaultJsonStr = 
             "[\n"
-            "    { \"percentage\": 0.0, \"sprite\": \"NA_dif.png\" },\n"
-            "    { \"percentage\": 8.33, \"sprite\": \"Auto_dif.png\" },\n"
-            "    { \"percentage\": 16.66, \"sprite\": \"Easy_dif.png\" },\n"
-            "    { \"percentage\": 25.0, \"sprite\": \"Normal_dif.png\" },\n"
-            "    { \"percentage\": 33.33, \"sprite\": \"Hard_dif.png\" },\n"
-            "    { \"percentage\": 41.66, \"sprite\": \"Harder_dif.png\" },\n"
-            "    { \"percentage\": 50.0, \"sprite\": \"Insane_dif.png\" },\n"
-            "    { \"percentage\": 66.66, \"sprite\": \"EasyDemon_dif.png\" },\n"
-            "    { \"percentage\": 75.0, \"sprite\": \"MediumDemon_dif.png\" },\n"
-            "    { \"percentage\": 83.33, \"sprite\": \"HardDemon_dif.png\" },\n"
-            "    { \"percentage\": 91.66, \"sprite\": \"InsaneDemon_dif.png\" },\n"
-            "    { \"percentage\": 100.0, \"sprite\": \"ExtremeDemon_dif.png\" }\n"
+            "    { \"percentage\": 0.0, \"sprite\": \"NA.png\" },\n"
+            "    { \"percentage\": 5.0, \"sprite\": \"Auto.png\" },\n"
+            "    { \"percentage\": 15.0, \"sprite\": \"Easy.png\" },\n"
+            "    { \"percentage\": 20.0, \"sprite\": \"Normal.png\" },\n"
+            "    { \"percentage\": 25.0, \"sprite\": \"Hard.png\" },\n"
+            "    { \"percentage\": 30.0, \"sprite\": \"Harder.png\" },\n"
+            "    { \"percentage\": 50.0, \"sprite\": \"Insane.png\" },\n"
+            "    { \"percentage\": 55.55, \"sprite\": \"EasyDemon.png\" },\n"
+            "    { \"percentage\": 60.0, \"sprite\": \"MediumDemon.png\" },\n"
+            "    { \"percentage\": 70.33, \"sprite\": \"HardDemon.png\" },\n"
+            "    { \"percentage\": 90.5, \"sprite\": \"InsaneDemon.png\" },\n"
+            "    { \"percentage\": 100.0, \"sprite\": \"ExtremeDemon.png\" }\n"
             "]";
 
             // CORRECCIÓN 1: Se usa .string() aquí
@@ -71,7 +71,7 @@ class $modify(MyPlayLayer, PlayLayer) {
         }
 
         if (safeFields->m_loadedRecipe.empty()) {
-            safeFields->m_loadedRecipe.push_back({ 0.0f, "NA_dif.png" });
+            safeFields->m_loadedRecipe.push_back({ 0.0f, "NA.png" });
         }
     }
 
@@ -86,7 +86,7 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         this->loadJsonRecipe();
 
-        m_fields->m_customDifficultyMeter = CCSprite::create("NA_dif.png"_spr);
+        m_fields->m_customDifficultyMeter = CCSprite::create("NA.png"_spr);
         
         if (m_fields->m_customDifficultyMeter) {
             auto winSize = CCDirector::sharedDirector()->getWinSize();
