@@ -41,12 +41,14 @@ class $modify(MyPlayLayer, PlayLayer) {
             "    { \"percentage\": 100.0, \"sprite\": \"ExtremeDemon_dif.png\" }\n"
             "]";
 
-            std::ofstream file(jsonPath);
+            // CORRECCIÓN 1: Se usa .string() aquí
+            std::ofstream file(jsonPath.string());
             file << defaultJsonStr;
             file.close();
         }
 
-        std::ifstream file(jsonPath);
+        // CORRECCIÓN 2: Se usa .string() aquí también
+        std::ifstream file(jsonPath.string());
         if (file.is_open()) {
             std::stringstream buffer;
             buffer << file.rdbuf();
@@ -73,8 +75,9 @@ class $modify(MyPlayLayer, PlayLayer) {
         }
     }
 
-    bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
-        if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
+    // CORRECCIÓN 3: Se eliminó 'useReplay' de los parámetros
+    bool init(GJGameLevel* level, bool dontCreateObjects) {
+        if (!PlayLayer::init(level, dontCreateObjects)) return false;
 
         if (level->isPlatformer()) return true;
 
